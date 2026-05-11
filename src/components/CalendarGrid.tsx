@@ -62,7 +62,7 @@ export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) 
               type="button"
               onClick={() => inMonth && onDayClick(date)}
               className={cn(
-                "relative flex min-h-[72px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[96px] sm:p-2",
+                "relative flex min-h-[88px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[120px] sm:p-2",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
                 meta ? meta.soft : "bg-secondary/40 text-foreground hover:bg-secondary",
@@ -77,31 +77,64 @@ export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) 
               >
                 {date.getDate()}
               </span>
-              <div className="mt-auto flex flex-col gap-0.5">
-                {dayEntries.slice(0, 2).map((e) => {
-                  const m = CATEGORY_META[e.category];
-                  return (
-                    <div
-                      key={e.id}
-                      className={cn(
-                        "truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
-                        m.color,
-                      )}
-                    >
-                      {e.title}
-                    </div>
-                  );
-                })}
-                {dayEntries.length > 2 && (
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    +{dayEntries.length - 2} til
-                  </span>
-                )}
-              </div>
+              <DayEntries entries={dayEntries} />
             </button>
           );
         })}
       </div>
+    </div>
+  );
+}
+
+function DayEntries({ entries }: { entries: CalendarEntry[] }) {
+  // Show as many entries as fit; overflow indicator for the rest.
+  // We use a responsive cap: tighter on mobile, more on larger cells.
+  const MOBILE_MAX = 3;
+  const DESKTOP_MAX = 5;
+  const visibleMobile = entries.slice(0, MOBILE_MAX);
+  const visibleDesktop = entries.slice(0, DESKTOP_MAX);
+  const overflowMobile = entries.length - MOBILE_MAX;
+  const overflowDesktop = entries.length - DESKTOP_MAX;
+
+  return (
+    <div className="mt-auto flex flex-col gap-0.5">
+      {/* Mobile list */}
+      <div className="flex flex-col gap-0.5 sm:hidden">
+        {visibleMobile.map((e) => (
+          <EntryChip key={e.id} entry={e} />
+        ))}
+        {overflowMobile > 0 && (
+          <span className="px-1 text-[10px] font-semibold text-muted-foreground">
+            +{overflowMobile} til
+          </span>
+        )}
+      </div>
+      {/* Desktop list */}
+      <div className="hidden flex-col gap-0.5 sm:flex">
+        {visibleDesktop.map((e) => (
+          <EntryChip key={e.id} entry={e} />
+        ))}
+        {overflowDesktop > 0 && (
+          <span className="px-1 text-xs font-semibold text-muted-foreground">
+            +{overflowDesktop} til
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EntryChip({ entry }: { entry: CalendarEntry }) {
+  const m = CATEGORY_META[entry.category];
+  return (
+    <div
+      className={cn(
+        "truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
+        m.color,
+      )}
+      title={entry.title}
+    >
+      {entry.title}
     </div>
   );
 }
