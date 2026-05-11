@@ -9,6 +9,7 @@ import { YearOverview } from "@/components/YearOverview";
 import { CategoryLegend } from "@/components/CategoryLegend";
 import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
+import { AssistantBar } from "@/components/AssistantBar";
 import {
   fetchEntries,
   FILTERS,
@@ -34,6 +35,7 @@ function Index() {
   const [entryOpen, setEntryOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
   const [initialDate, setInitialDate] = useState<Date | null>(null);
+  const [draftEntry, setDraftEntry] = useState<Partial<CalendarEntry> | null>(null);
   const [detailDate, setDetailDate] = useState<Date | null>(null);
 
   const { data: entries = [], isLoading } = useQuery({
@@ -77,6 +79,15 @@ function Index() {
           </h1>
           <CategoryLegend />
         </header>
+
+        <AssistantBar
+          onEditDraft={(d) => {
+            setEditingEntry(null);
+            setInitialDate(null);
+            setDraftEntry(d);
+            setEntryOpen(true);
+          }}
+        />
 
         <div className="mx-auto flex rounded-full bg-card p-1 shadow-sm">
           <ToggleBtn
@@ -175,6 +186,7 @@ function Index() {
             onClick={() => {
               setEditingEntry(null);
               setInitialDate(null);
+              setDraftEntry(null);
               setEntryOpen(true);
             }}
           >
@@ -188,10 +200,14 @@ function Index() {
         open={entryOpen}
         onOpenChange={(o) => {
           setEntryOpen(o);
-          if (!o) setEditingEntry(null);
+          if (!o) {
+            setEditingEntry(null);
+            setDraftEntry(null);
+          }
         }}
         initialDate={initialDate}
         entry={editingEntry}
+        draft={draftEntry}
       />
       <DayDetailPanel
         date={detailDate}

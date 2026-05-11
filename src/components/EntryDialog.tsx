@@ -32,9 +32,10 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   initialDate: Date | null;
   entry?: CalendarEntry | null;
+  draft?: Partial<CalendarEntry> | null;
 };
 
-export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
+export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: Props) {
   const [category, setCategory] = useState<Category>("cabin");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -51,6 +52,13 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
       setTitle(entry.title);
       setDescription(entry.description ?? "");
       setRange({ from: parseISODate(entry.start_date), to: parseISODate(entry.end_date) });
+    } else if (draft) {
+      setCategory((draft.category as Category) ?? "cabin");
+      setTitle(draft.title ?? "");
+      setDescription(draft.description ?? "");
+      const from = draft.start_date ? parseISODate(draft.start_date) : (initialDate ?? new Date());
+      const to = draft.end_date ? parseISODate(draft.end_date) : from;
+      setRange({ from, to });
     } else {
       setCategory("cabin");
       setTitle("");
@@ -58,7 +66,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
       const d = initialDate ?? new Date();
       setRange({ from: d, to: d });
     }
-  }, [open, initialDate, entry]);
+  }, [open, initialDate, entry, draft]);
 
   const mutation = useMutation({
     mutationFn: async () => {
