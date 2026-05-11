@@ -21,7 +21,12 @@ type Draft = {
   description: string | null;
 };
 
-type Result = { intent: "create" | "answer"; reply: string; draft: Draft | null };
+type Result = {
+  intent: "create" | "answer";
+  reply: string;
+  draft: Draft | null;
+  matched_ids?: string[];
+};
 
 const PLACEHOLDERS = [
   "Hva skjer 17 mai?",
@@ -31,10 +36,12 @@ const PLACEHOLDERS = [
 ];
 
 type Props = {
+  entries: CalendarEntry[];
   onEditDraft: (draft: Partial<CalendarEntry>) => void;
+  onOpenEvent: (entry: CalendarEntry) => void;
 };
 
-export function AssistantBar({ onEditDraft }: Props) {
+export function AssistantBar({ entries, onEditDraft, onOpenEvent }: Props) {
   const ask = useServerFn(askAssistant);
   const qc = useQueryClient();
   const [query, setQuery] = useState("");
@@ -73,6 +80,9 @@ export function AssistantBar({ onEditDraft }: Props) {
   };
 
   const draft = result?.draft;
+  const matched = (result?.matched_ids ?? [])
+    .map((id) => entries.find((e) => e.id === id))
+    .filter((e): e is CalendarEntry => Boolean(e));
 
   return (
     <div className="rounded-3xl bg-card p-3 shadow-sm sm:p-4">
@@ -107,6 +117,42 @@ export function AssistantBar({ onEditDraft }: Props) {
               <X className="h-4 w-4" />
             </button>
           </div>
+
+          {matched.length > 0 && (
+            <div className="mt-3 flex flex-col gap-2">
+              {matched.map((e) => {
+                const meta = CATEGORY_META[e.category];
+                const Icon = meta.icon;
+                const start = parseISODate(e.start_date);
+                const end = parseISODate(e.end_date);
+                const sameDay = e.start_date === e.end_date;
+                return (
+                  <button
+                    key={e.id}
+                    type="button"
+                    onClick={() => {
+                      onOpenEvent(e);
+                      setResult(null);
+                    }}
+                    className="flex items-center gap-3 rounded-xl bg-card p-3 text-left transition-colors hover:bg-secondary"
+                  >
+                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", meta.soft)}>
+                      <Icon className="h-4 w-4" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm font-semibold text-foreground">{e.title}</span>
+                      <span className="block text-xs text-muted-foreground">
+                        {meta.label} ·{" "}
+                        {sameDay
+                          ? format(start, "d. MMM yyyy", { locale: nb })
+                          : `${format(start, "d. MMM", { locale: nb })} – ${format(end, "d. MMM yyyy", { locale: nb })}`}
+                      </span>
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          )}
 
           {result.intent === "create" && draft && (
             <div className="mt-3 space-y-3">
