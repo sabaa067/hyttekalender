@@ -14,43 +14,70 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-import { createEvent, EVENT_META, type EventType } from "@/lib/events";
-import { toISODate } from "@/lib/bookings";
+import { CATEGORIES, CATEGORY_META, type Category } from "@/lib/categories";
+import {
+  createEntry,
+  updateEntry,
+  toISODate,
+  parseISODate,
+  type CalendarEntry,
+} from "@/lib/entries";
 
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialDate: Date | null;
+  entry?: CalendarEntry | null;
 };
 
-const TYPES: EventType[] = ["birthday", "event", "highlight"];
-
-export function EventDialog({ open, onOpenChange, initialDate }: Props) {
-  const [type, setType] = useState<EventType>("event");
+export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
+  const [category, setCategory] = useState<Category>("cabin");
   const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
   const [start, setStart] = useState<Date | undefined>(undefined);
   const [end, setEnd] = useState<Date | undefined>(undefined);
   const qc = useQueryClient();
+  const isEdit = !!entry;
 
   useEffect(() => {
-    if (open) {
-      setType("event");
+    if (!open) return;
+    if (entry) {
+      setCategory(entry.category);
+      setTitle(entry.title);
+      setDescription(entry.description ?? "");
+      setStart(parseISODate(entry.start_date));
+      setEnd(parseISODate(entry.end_date));
+    } else {
+      setCategory("cabin");
       setTitle("");
+      setDescription("");
       setStart(initialDate ?? new Date());
       setEnd(initialDate ?? new Date());
     }
-  }, [open, initialDate]);
+  }, [open, initialDate, entry]);
 
   const mutation = useMutation({
-    mutationFn: createEvent,
+    mutationFn: async () => {
+      if (!start || !end) throw new Error("Velg datoer");
+      const payload = {
+        title: title.trim(),
+        category,
+        start_date: toISODate(start),
+        end_date: toISODate(end),
+        description: description.trim() || null,
+      };
+      if (entry) await updateEntry(entry.id, payload);
+      else await createEntry(payload);
+    },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["events"] });
-      toast.success("Hendelse lagret");
+      qc.invalidateQueries({ queryKey: ["entries"] });
+      toast.success(isEdit ? "Lagret" : "Lagt til");
       onOpenChange(false);
     },
     onError: (err: Error) => toast.error(err.message),
@@ -63,34 +90,36 @@ export function EventDialog({ open, onOpenChange, initialDate }: Props) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md rounded-3xl">
         <DialogHeader>
-          <DialogTitle className="text-2xl">Ny hendelse</DialogTitle>
+          <DialogTitle className="text-2xl">
+            {isEdit ? "Rediger" : "Ny oppføring"}
+          </DialogTitle>
           <DialogDescription className="text-base">
-            Bursdag, arrangement eller høydepunkt.
+            Legg til hytteopphold, bursdag, arrangement eller høydepunkt.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-5 py-2">
           <div>
-            <p className="mb-3 text-base font-medium text-foreground">Type</p>
-            <div className="grid grid-cols-3 gap-2">
-              {TYPES.map((t) => {
-                const meta = EVENT_META[t];
-                const Icon = meta.icon;
+            <p className="mb-3 text-base font-medium text-foreground">Kategori</p>
+            <div className="grid grid-cols-2 gap-2">
+              {CATEGORIES.map((c) => {
+                const m = CATEGORY_META[c];
+                const Icon = m.icon;
                 return (
                   <button
-                    key={t}
+                    key={c}
                     type="button"
-                    onClick={() => setType(t)}
+                    onClick={() => setCategory(c)}
                     className={cn(
-                      "flex flex-col items-center gap-2 rounded-2xl p-3 text-sm font-medium transition-all",
-                      meta.soft,
-                      type === t
+                      "flex items-center gap-2 rounded-2xl p-3 text-base font-medium transition-all",
+                      m.soft,
+                      category === c
                         ? "ring-2 ring-foreground ring-offset-2 ring-offset-card"
                         : "opacity-70 hover:opacity-100",
                     )}
                   >
                     <Icon className="h-5 w-5" />
-                    {meta.label}
+                    {m.label}
                   </button>
                 );
               })}
@@ -102,13 +131,7 @@ export function EventDialog({ open, onOpenChange, initialDate }: Props) {
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={
-                type === "birthday"
-                  ? "F.eks. Farfars bursdag"
-                  : type === "highlight"
-                    ? "F.eks. Jul, Påske, Sommerferie"
-                    : "F.eks. Familiemiddag"
-              }
+              placeholder="F.eks. Påske, Jakthelg, Bursdag Ole"
               className="h-12 rounded-2xl text-base"
             />
           </div>
@@ -116,6 +139,18 @@ export function EventDialog({ open, onOpenChange, initialDate }: Props) {
           <div className="grid grid-cols-2 gap-3">
             <DateField label="Fra" date={start} onChange={setStart} />
             <DateField label="Til" date={end} onChange={setEnd} minDate={start} />
+          </div>
+
+          <div>
+            <p className="mb-2 text-base font-medium text-foreground">
+              Beskrivelse <span className="text-muted-foreground">(valgfritt)</span>
+            </p>
+            <Textarea
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              placeholder="Kort notat"
+              className="min-h-[80px] rounded-2xl text-base"
+            />
           </div>
         </div>
 
@@ -132,17 +167,9 @@ export function EventDialog({ open, onOpenChange, initialDate }: Props) {
             size="lg"
             className="rounded-2xl text-base"
             disabled={!canSubmit}
-            onClick={() => {
-              if (!start || !end) return;
-              mutation.mutate({
-                title: title.trim(),
-                type,
-                start_date: toISODate(start),
-                end_date: toISODate(end),
-              });
-            }}
+            onClick={() => mutation.mutate()}
           >
-            Lagre
+            {isEdit ? "Lagre" : "Legg til"}
           </Button>
         </DialogFooter>
       </DialogContent>

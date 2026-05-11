@@ -6,13 +6,15 @@ import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays } from "lucid
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { YearOverview } from "@/components/YearOverview";
-import { PersonLegend } from "@/components/PersonLegend";
-import { BookingDialog } from "@/components/BookingDialog";
-import { EventDialog } from "@/components/EventDialog";
-import { DayDetailDialog } from "@/components/DayDetailDialog";
-import { fetchBookings } from "@/lib/bookings";
-import { fetchEvents } from "@/lib/events";
-import { FILTERS, type FilterKey } from "@/lib/filters";
+import { CategoryLegend } from "@/components/CategoryLegend";
+import { EntryDialog } from "@/components/EntryDialog";
+import { DayDetailPanel } from "@/components/DayDetailPanel";
+import {
+  fetchEntries,
+  FILTERS,
+  type FilterKey,
+  type CalendarEntry,
+} from "@/lib/entries";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -25,22 +27,18 @@ function Index() {
   const [view, setView] = useState<ViewMode>("modern");
   const [filter, setFilter] = useState<FilterKey>("all");
   const [monthDate, setMonthDate] = useState(() => {
-    const now = new Date();
-    return new Date(now.getFullYear(), now.getMonth(), 1);
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
   });
   const [year, setYear] = useState(() => new Date().getFullYear());
-  const [bookingOpen, setBookingOpen] = useState(false);
-  const [eventOpen, setEventOpen] = useState(false);
+  const [entryOpen, setEntryOpen] = useState(false);
+  const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
   const [initialDate, setInitialDate] = useState<Date | null>(null);
   const [detailDate, setDetailDate] = useState<Date | null>(null);
 
-  const { data: bookings = [], isLoading: bL } = useQuery({
-    queryKey: ["bookings"],
-    queryFn: fetchBookings,
-  });
-  const { data: events = [], isLoading: eL } = useQuery({
-    queryKey: ["events"],
-    queryFn: fetchEvents,
+  const { data: entries = [], isLoading } = useQuery({
+    queryKey: ["entries"],
+    queryFn: fetchEntries,
   });
 
   const monthLabel = monthDate.toLocaleDateString("no-NO", {
@@ -63,24 +61,23 @@ function Index() {
     }
   };
   const goToday = () => {
-    const now = new Date();
-    setMonthDate(new Date(now.getFullYear(), now.getMonth(), 1));
-    setYear(now.getFullYear());
+    const n = new Date();
+    setMonthDate(new Date(n.getFullYear(), n.getMonth(), 1));
+    setYear(n.getFullYear());
   };
 
-  const isEmpty = !bL && !eL && bookings.length === 0 && events.length === 0;
+  const isEmpty = !isLoading && entries.length === 0;
 
   return (
     <div className="min-h-screen bg-background">
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 pt-6 sm:gap-6 sm:pt-10">
         <header className="flex flex-col items-center gap-4 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Hyttekalender
+            Familiekalender
           </h1>
-          <PersonLegend />
+          <CategoryLegend />
         </header>
 
-        {/* View toggle */}
         <div className="mx-auto flex rounded-full bg-card p-1 shadow-sm">
           <ToggleBtn
             active={view === "overview"}
@@ -96,7 +93,6 @@ function Index() {
           />
         </div>
 
-        {/* Filters */}
         <div className="flex flex-wrap items-center justify-center gap-2">
           {FILTERS.map((f) => (
             <button
@@ -115,7 +111,6 @@ function Index() {
           ))}
         </div>
 
-        {/* Navigation */}
         <div className="flex items-center justify-between gap-2 rounded-3xl bg-card p-2 shadow-sm sm:p-3">
           <Button
             variant="ghost"
@@ -147,16 +142,14 @@ function Index() {
         {view === "modern" ? (
           <CalendarGrid
             monthDate={monthDate}
-            bookings={bookings}
-            events={events}
+            entries={entries}
             filter={filter}
             onDayClick={(d) => setDetailDate(d)}
           />
         ) : (
           <YearOverview
             year={year}
-            bookings={bookings}
-            events={events}
+            entries={entries}
             filter={filter}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -168,63 +161,53 @@ function Index() {
         {isEmpty && (
           <div className="rounded-3xl bg-card p-8 text-center shadow-sm">
             <p className="text-lg text-muted-foreground">
-              Ingen bookinger eller hendelser ennå. Trykk på en dato for å starte.
+              Ingen oppføringer ennå. Trykk på en dato eller knappen under for å starte.
             </p>
           </div>
         )}
       </div>
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 p-4 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl gap-2">
-          <Button
-            variant="outline"
-            size="lg"
-            className="h-16 flex-1 rounded-2xl text-base font-semibold"
-            onClick={() => {
-              setInitialDate(null);
-              setEventOpen(true);
-            }}
-          >
-            Ny hendelse
-          </Button>
+        <div className="mx-auto flex max-w-3xl">
           <Button
             size="lg"
-            className="h-16 flex-1 rounded-2xl text-lg font-semibold shadow-md"
+            className="h-16 w-full rounded-2xl text-lg font-semibold shadow-md"
             onClick={() => {
+              setEditingEntry(null);
               setInitialDate(null);
-              setBookingOpen(true);
+              setEntryOpen(true);
             }}
           >
             <Plus className="!h-6 !w-6" />
-            Ny booking
+            Ny oppføring
           </Button>
         </div>
       </div>
 
-      <BookingDialog
-        open={bookingOpen}
-        onOpenChange={setBookingOpen}
-        initialDate={initialDate}
-      />
-      <EventDialog
-        open={eventOpen}
-        onOpenChange={setEventOpen}
-        initialDate={initialDate}
-      />
-      <DayDetailDialog
-        date={detailDate}
-        bookings={bookings}
-        events={events}
-        onOpenChange={(o) => !o && setDetailDate(null)}
-        onAddBooking={() => {
-          setInitialDate(detailDate);
-          setDetailDate(null);
-          setBookingOpen(true);
+      <EntryDialog
+        open={entryOpen}
+        onOpenChange={(o) => {
+          setEntryOpen(o);
+          if (!o) setEditingEntry(null);
         }}
-        onAddEvent={() => {
+        initialDate={initialDate}
+        entry={editingEntry}
+      />
+      <DayDetailPanel
+        date={detailDate}
+        entries={entries}
+        onOpenChange={(o) => !o && setDetailDate(null)}
+        onAdd={() => {
+          setEditingEntry(null);
           setInitialDate(detailDate);
           setDetailDate(null);
-          setEventOpen(true);
+          setEntryOpen(true);
+        }}
+        onEdit={(e) => {
+          setEditingEntry(e);
+          setInitialDate(null);
+          setDetailDate(null);
+          setEntryOpen(true);
         }}
       />
     </div>

@@ -1,9 +1,13 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { type Booking, toISODate, bookingCoversDate } from "@/lib/bookings";
-import { personMeta } from "@/lib/persons";
-import { type CalendarEvent, eventCoversDate } from "@/lib/events";
-import { type FilterKey, showBookings, showEventType } from "@/lib/filters";
+import {
+  type CalendarEntry,
+  toISODate,
+  entryCoversDate,
+  entryMatchesFilter,
+  type FilterKey,
+} from "@/lib/entries";
+import { CATEGORY_META } from "@/lib/categories";
 
 const MONTH_NAMES = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
@@ -13,13 +17,13 @@ const WEEKDAY_SHORT = ["M", "T", "O", "T", "F", "L", "S"];
 
 type Props = {
   year: number;
-  bookings: Booking[];
-  events: CalendarEvent[];
+  entries: CalendarEntry[];
   filter: FilterKey;
   onDayClick: (date: Date) => void;
 };
 
-export function YearOverview({ year, bookings, events, filter, onDayClick }: Props) {
+export function YearOverview({ year, entries, filter, onDayClick }: Props) {
+  const visible = entries.filter((e) => entryMatchesFilter(e, filter));
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }, (_, m) => (
@@ -27,9 +31,7 @@ export function YearOverview({ year, bookings, events, filter, onDayClick }: Pro
           key={m}
           year={year}
           month={m}
-          bookings={bookings}
-          events={events}
-          filter={filter}
+          entries={visible}
           onDayClick={onDayClick}
         />
       ))}
@@ -38,8 +40,8 @@ export function YearOverview({ year, bookings, events, filter, onDayClick }: Pro
 }
 
 function MiniMonth({
-  year, month, bookings, events, filter, onDayClick,
-}: { year: number; month: number } & Omit<Props, "year">) {
+  year, month, entries, onDayClick,
+}: { year: number; month: number; entries: CalendarEntry[]; onDayClick: (d: Date) => void }) {
   const cells = useMemo(() => {
     const first = new Date(year, month, 1);
     const offset = (first.getDay() + 6) % 7;
@@ -53,7 +55,6 @@ function MiniMonth({
   }, [year, month]);
 
   const todayISO = toISODate(new Date());
-  const bookingsVisible = showBookings(filter);
 
   return (
     <div className="rounded-2xl bg-card p-3 shadow-sm">
@@ -70,15 +71,10 @@ function MiniMonth({
       <div className="grid grid-cols-7 gap-0.5">
         {cells.map(({ date, inMonth }, idx) => {
           const iso = toISODate(date);
-          const booking = bookingsVisible
-            ? bookings.find((b) => bookingCoversDate(b, iso))
-            : undefined;
-          const dayEvents = events.filter(
-            (e) => showEventType(filter, e.type) && eventCoversDate(e, iso),
-          );
-          const hasEvent = dayEvents.length > 0;
+          const dayEntries = entries.filter((e) => entryCoversDate(e, iso));
+          const primary = dayEntries[0];
+          const meta = primary ? CATEGORY_META[primary.category] : null;
           const isToday = iso === todayISO;
-          const meta = booking ? personMeta(booking.person) : null;
 
           return (
             <button
@@ -89,13 +85,16 @@ function MiniMonth({
               className={cn(
                 "relative flex aspect-square items-center justify-center rounded-md text-xs transition-all",
                 inMonth ? "cursor-pointer hover:scale-110" : "opacity-0 pointer-events-none",
-                booking && meta ? meta.soft : "text-foreground hover:bg-secondary",
+                meta ? meta.soft : "text-foreground hover:bg-secondary",
                 isToday && "ring-1 ring-foreground",
               )}
+              title={dayEntries.map((e) => e.title).join(", ")}
             >
               <span className={cn(isToday && "font-bold")}>{date.getDate()}</span>
-              {hasEvent && (
-                <span className="absolute bottom-0.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-event-event" />
+              {dayEntries.length > 1 && (
+                <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold opacity-70">
+                  +{dayEntries.length - 1}
+                </span>
               )}
             </button>
           );
