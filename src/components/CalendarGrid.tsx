@@ -85,3 +85,56 @@ export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) 
     </div>
   );
 }
+
+function DayEntries({ entries }: { entries: CalendarEntry[] }) {
+  // Show as many entries as fit; overflow indicator for the rest.
+  // We use a responsive cap: tighter on mobile, more on larger cells.
+  const MOBILE_MAX = 3;
+  const DESKTOP_MAX = 5;
+  const visibleMobile = entries.slice(0, MOBILE_MAX);
+  const visibleDesktop = entries.slice(0, DESKTOP_MAX);
+  const overflowMobile = entries.length - MOBILE_MAX;
+  const overflowDesktop = entries.length - DESKTOP_MAX;
+
+  return (
+    <div className="mt-auto flex flex-col gap-0.5">
+      {/* Mobile list */}
+      <div className="flex flex-col gap-0.5 sm:hidden">
+        {visibleMobile.map((e) => (
+          <EntryChip key={e.id} entry={e} />
+        ))}
+        {overflowMobile > 0 && (
+          <span className="px-1 text-[10px] font-semibold text-muted-foreground">
+            +{overflowMobile} til
+          </span>
+        )}
+      </div>
+      {/* Desktop list */}
+      <div className="hidden flex-col gap-0.5 sm:flex">
+        {visibleDesktop.map((e) => (
+          <EntryChip key={e.id} entry={e} />
+        ))}
+        {overflowDesktop > 0 && (
+          <span className="px-1 text-xs font-semibold text-muted-foreground">
+            +{overflowDesktop} til
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function EntryChip({ entry }: { entry: CalendarEntry }) {
+  const m = CATEGORY_META[entry.category];
+  return (
+    <div
+      className={cn(
+        "truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
+        m.color,
+      )}
+      title={entry.title}
+    >
+      {entry.title}
+    </div>
+  );
+}
