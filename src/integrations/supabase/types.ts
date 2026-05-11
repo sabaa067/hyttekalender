@@ -38,6 +38,39 @@ export type Database = {
         }
         Relationships: []
       }
+      events: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          person: string | null
+          recurring_yearly: boolean
+          start_date: string
+          title: string
+          type: Database["public"]["Enums"]["event_type"]
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          person?: string | null
+          recurring_yearly?: boolean
+          start_date: string
+          title: string
+          type: Database["public"]["Enums"]["event_type"]
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          person?: string | null
+          recurring_yearly?: boolean
+          start_date?: string
+          title?: string
+          type?: Database["public"]["Enums"]["event_type"]
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -47,6 +80,7 @@ export type Database = {
     }
     Enums: {
       booking_person: "grandfather" | "father" | "uncle"
+      event_type: "birthday" | "event" | "highlight"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -175,6 +209,7 @@ export const Constants = {
   public: {
     Enums: {
       booking_person: ["grandfather", "father", "uncle"],
+      event_type: ["birthday", "event", "highlight"],
     },
   },
 } as const
