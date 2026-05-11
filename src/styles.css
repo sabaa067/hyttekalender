@@ -46,18 +46,14 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
-  --color-person-grandfather: var(--person-grandfather);
-  --color-person-grandfather-soft: var(--person-grandfather-soft);
-  --color-person-father: var(--person-father);
-  --color-person-father-soft: var(--person-father-soft);
-  --color-person-uncle: var(--person-uncle);
-  --color-person-uncle-soft: var(--person-uncle-soft);
-  --color-event-birthday: var(--event-birthday);
-  --color-event-birthday-soft: var(--event-birthday-soft);
-  --color-event-event: var(--event-event);
-  --color-event-event-soft: var(--event-event-soft);
-  --color-event-highlight: var(--event-highlight);
-  --color-event-highlight-soft: var(--event-highlight-soft);
+  --color-cat-cabin: var(--cat-cabin);
+  --color-cat-cabin-soft: var(--cat-cabin-soft);
+  --color-cat-birthday: var(--cat-birthday);
+  --color-cat-birthday-soft: var(--cat-birthday-soft);
+  --color-cat-event: var(--cat-event);
+  --color-cat-event-soft: var(--cat-event-soft);
+  --color-cat-highlight: var(--cat-highlight);
+  --color-cat-highlight-soft: var(--cat-highlight-soft);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -95,21 +91,15 @@
   --input: oklch(0.9 0.01 95);
   --ring: oklch(0.55 0.05 250);
 
-  /* Person colors — calm Scandinavian palette */
-  --person-grandfather: oklch(0.58 0.13 245);
-  --person-grandfather-soft: oklch(0.92 0.04 245);
-  --person-father: oklch(0.6 0.13 155);
-  --person-father-soft: oklch(0.93 0.04 155);
-  --person-uncle: oklch(0.7 0.15 55);
-  --person-uncle-soft: oklch(0.94 0.05 65);
-
-  /* Event colors */
-  --event-birthday: oklch(0.65 0.18 340);
-  --event-birthday-soft: oklch(0.95 0.04 340);
-  --event-event: oklch(0.55 0.08 280);
-  --event-event-soft: oklch(0.94 0.025 280);
-  --event-highlight: oklch(0.6 0.14 30);
-  --event-highlight-soft: oklch(0.95 0.035 30);
+  /* Category colors — Scandinavian cabin palette */
+  --cat-cabin: oklch(0.58 0.12 175);
+  --cat-cabin-soft: oklch(0.93 0.04 175);
+  --cat-birthday: oklch(0.78 0.15 85);
+  --cat-birthday-soft: oklch(0.95 0.06 85);
+  --cat-event: oklch(0.55 0.15 295);
+  --cat-event-soft: oklch(0.94 0.04 295);
+  --cat-highlight: oklch(0.62 0.18 35);
+  --cat-highlight-soft: oklch(0.95 0.05 35);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
