@@ -4,21 +4,6 @@ import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const ResultSchema = z.object({
-  intent: z.enum(["create", "answer"]).describe("create = user wants to add a new entry; answer = user is asking a question"),
-  reply: z.string().describe("Short, friendly Norwegian answer (1-3 sentences). For 'create' intent: a brief confirmation like 'Forslag klart'."),
-  draft: z
-    .object({
-      title: z.string(),
-      category: z.enum(["cabin", "birthday", "event", "highlight", "note"]),
-      start_date: z.string().describe("YYYY-MM-DD"),
-      end_date: z.string().describe("YYYY-MM-DD"),
-      description: z.string().nullable(),
-    })
-    .nullable()
-    .describe("Only set when intent is 'create'."),
-});
-
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((data: { query: string }) => z.object({ query: z.string().min(1).max(500) }).parse(data))
   .handler(async ({ data }) => {
@@ -34,6 +19,20 @@ export const askAssistant = createServerFn({ method: "POST" })
     const today = new Date().toISOString().slice(0, 10);
     const gateway = createLovableAiGatewayProvider(apiKey);
     const model = gateway("google/gemini-2.5-flash");
+
+    const ResultSchema = z.object({
+      intent: z.enum(["create", "answer"]),
+      reply: z.string(),
+      draft: z
+        .object({
+          title: z.string(),
+          category: z.enum(["cabin", "birthday", "event", "highlight", "note"]),
+          start_date: z.string(),
+          end_date: z.string(),
+          description: z.string().nullable(),
+        })
+        .nullable(),
+    });
 
     const system = [
       "Du er en hjelpsom assistent for en norsk familiekalender.",
