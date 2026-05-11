@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays } from "lucid
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { YearOverview } from "@/components/YearOverview";
-import { CategoryLegend } from "@/components/CategoryLegend";
 import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
 import { AssistantBar } from "@/components/AssistantBar";
@@ -77,15 +76,20 @@ function Index() {
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Familiekalender
           </h1>
-          <CategoryLegend />
         </header>
 
         <AssistantBar
+          entries={entries}
           onEditDraft={(d) => {
             setEditingEntry(null);
             setInitialDate(null);
             setDraftEntry(d);
             setEntryOpen(true);
+          }}
+          onOpenEvent={(e) => {
+            const d = new Date(e.start_date + "T00:00:00");
+            setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
+            setDetailDate(d);
           }}
         />
 
