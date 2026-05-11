@@ -38,6 +38,39 @@ export type Database = {
         }
         Relationships: []
       }
+      calendar_entries: {
+        Row: {
+          category: Database["public"]["Enums"]["entry_category"]
+          created_at: string
+          description: string | null
+          end_date: string
+          id: string
+          start_date: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["entry_category"]
+          created_at?: string
+          description?: string | null
+          end_date: string
+          id?: string
+          start_date: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["entry_category"]
+          created_at?: string
+          description?: string | null
+          end_date?: string
+          id?: string
+          start_date?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       events: {
         Row: {
           created_at: string
@@ -80,6 +113,7 @@ export type Database = {
     }
     Enums: {
       booking_person: "grandfather" | "father" | "uncle"
+      entry_category: "cabin" | "birthday" | "event" | "highlight"
       event_type: "birthday" | "event" | "highlight"
     }
     CompositeTypes: {
@@ -209,6 +243,7 @@ export const Constants = {
   public: {
     Enums: {
       booking_person: ["grandfather", "father", "uncle"],
+      entry_category: ["cabin", "birthday", "event", "highlight"],
       event_type: ["birthday", "event", "highlight"],
     },
   },
