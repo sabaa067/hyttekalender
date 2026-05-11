@@ -46,6 +46,12 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-ring-offset-background: var(--background);
+  --color-person-grandfather: var(--person-grandfather);
+  --color-person-grandfather-soft: var(--person-grandfather-soft);
+  --color-person-father: var(--person-father);
+  --color-person-father-soft: var(--person-father-soft);
+  --color-person-uncle: var(--person-uncle);
+  --color-person-uncle-soft: var(--person-uncle-soft);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
