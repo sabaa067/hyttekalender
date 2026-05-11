@@ -209,6 +209,7 @@ function DateField({
           <Calendar
             mode="single"
             selected={date}
+            defaultMonth={date ?? minDate}
             onSelect={onChange}
             disabled={minDate ? (d) => d < minDate : undefined}
             initialFocus
