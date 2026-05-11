@@ -54,6 +54,8 @@
   --color-cat-event-soft: var(--cat-event-soft);
   --color-cat-highlight: var(--cat-highlight);
   --color-cat-highlight-soft: var(--cat-highlight-soft);
+  --color-cat-note: var(--cat-note);
+  --color-cat-note-soft: var(--cat-note-soft);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -100,6 +102,8 @@
   --cat-event-soft: oklch(0.94 0.04 295);
   --cat-highlight: oklch(0.62 0.18 35);
   --cat-highlight-soft: oklch(0.95 0.05 35);
+  --cat-note: oklch(0.5 0.02 250);
+  --cat-note-soft: oklch(0.94 0.01 250);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
