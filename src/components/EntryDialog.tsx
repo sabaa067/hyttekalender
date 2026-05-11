@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar as CalendarIcon } from "lucide-react";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 
@@ -16,7 +15,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -40,10 +38,11 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
   const [category, setCategory] = useState<Category>("cabin");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [start, setStart] = useState<Date | undefined>(undefined);
-  const [end, setEnd] = useState<Date | undefined>(undefined);
+  const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
   const qc = useQueryClient();
   const isEdit = !!entry;
+  const start = range?.from;
+  const end = range?.to ?? range?.from;
 
   useEffect(() => {
     if (!open) return;
@@ -51,14 +50,13 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
       setCategory(entry.category);
       setTitle(entry.title);
       setDescription(entry.description ?? "");
-      setStart(parseISODate(entry.start_date));
-      setEnd(parseISODate(entry.end_date));
+      setRange({ from: parseISODate(entry.start_date), to: parseISODate(entry.end_date) });
     } else {
       setCategory("cabin");
       setTitle("");
       setDescription("");
-      setStart(initialDate ?? new Date());
-      setEnd(initialDate ?? new Date());
+      const d = initialDate ?? new Date();
+      setRange({ from: d, to: d });
     }
   }, [open, initialDate, entry]);
 
@@ -84,7 +82,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
   });
 
   const canSubmit =
-    title.trim().length > 0 && start && end && end >= start && !mutation.isPending;
+    title.trim().length > 0 && !!start && !!end && end >= start && !mutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -136,9 +134,30 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <DateField label="Fra" date={start} onChange={setStart} />
-            <DateField label="Til" date={end} onChange={setEnd} minDate={start} />
+          <div>
+            <div className="mb-2 flex items-baseline justify-between">
+              <p className="text-base font-medium text-foreground">Datoer</p>
+              <p className="text-sm text-muted-foreground">
+                {start && end
+                  ? start.getTime() === end.getTime()
+                    ? format(start, "d. MMM yyyy", { locale: nb })
+                    : `${format(start, "d. MMM", { locale: nb })} – ${format(end, "d. MMM yyyy", { locale: nb })}`
+                  : start
+                    ? `${format(start, "d. MMM yyyy", { locale: nb })} – velg sluttdato`
+                    : "Velg startdato"}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-2">
+              <Calendar
+                mode="range"
+                selected={range as any}
+                onSelect={(r: any) => setRange(r ?? undefined)}
+                defaultMonth={start ?? new Date()}
+                numberOfMonths={1}
+                locale={nb}
+                className={cn("p-2 pointer-events-auto mx-auto")}
+              />
+            </div>
           </div>
 
           <div>
@@ -174,49 +193,5 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  );
-}
-
-function DateField({
-  label,
-  date,
-  onChange,
-  minDate,
-}: {
-  label: string;
-  date: Date | undefined;
-  onChange: (d: Date | undefined) => void;
-  minDate?: Date;
-}) {
-  return (
-    <div>
-      <p className="mb-2 text-base font-medium text-foreground">{label}</p>
-      <Popover>
-        <PopoverTrigger asChild>
-          <Button
-            variant="outline"
-            size="lg"
-            className={cn(
-              "w-full justify-start rounded-2xl text-base font-normal",
-              !date && "text-muted-foreground",
-            )}
-          >
-            <CalendarIcon className="mr-2 h-4 w-4" />
-            {date ? format(date, "d. MMM yyyy", { locale: nb }) : "Velg dato"}
-          </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-auto p-0" align="start">
-          <Calendar
-            mode="single"
-            selected={date}
-            defaultMonth={date ?? minDate}
-            onSelect={onChange}
-            disabled={minDate ? (d) => d < minDate : undefined}
-            initialFocus
-            className={cn("p-3 pointer-events-auto")}
-          />
-        </PopoverContent>
-      </Popover>
-    </div>
   );
 }
