@@ -44,7 +44,13 @@ export function AssistantBar({ onEditDraft }: Props) {
   const askMut = useMutation({
     mutationFn: async (q: string) => (await ask({ data: { query: q } })) as Result,
     onSuccess: (r) => setResult(r),
-    onError: (e: Error) => toast.error(e.message || "Klarte ikke å spørre"),
+    onError: () =>
+      setResult({
+        intent: "answer",
+        reply:
+          'Jeg forstod ikke helt spørsmålet. Prøv for eksempel: "Hva skjer 11 juni?" eller "Legg inn hyttetur 12–15 juli".',
+        draft: null,
+      }),
   });
 
   const publishMut = useMutation({
