@@ -1,6 +1,6 @@
-import { Home, Cake, Sparkles, CalendarDays, type LucideIcon } from "lucide-react";
+import { Home, Cake, Sparkles, CalendarDays, StickyNote, type LucideIcon } from "lucide-react";
 
-export type Category = "cabin" | "birthday" | "event" | "highlight";
+export type Category = "cabin" | "birthday" | "event" | "highlight" | "note";
 
 export const CATEGORY_META: Record<
   Category,
@@ -34,6 +34,13 @@ export const CATEGORY_META: Record<
     dot: "bg-cat-highlight",
     icon: Sparkles,
   },
+  note: {
+    label: "Notat",
+    color: "bg-cat-note text-white",
+    soft: "bg-cat-note-soft text-cat-note",
+    dot: "bg-cat-note",
+    icon: StickyNote,
+  },
 };
 
-export const CATEGORIES: Category[] = ["cabin", "birthday", "event", "highlight"];
+export const CATEGORIES: Category[] = ["cabin", "birthday", "event", "highlight", "note"];
