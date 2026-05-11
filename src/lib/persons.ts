@@ -3,14 +3,14 @@ export type Person = "grandfather" | "father" | "uncle";
 export const PERSONS: { id: Person; label: string; color: string; soft: string; ring: string }[] = [
   {
     id: "grandfather",
-    label: "Bestefar",
+    label: "Farfar",
     color: "bg-person-grandfather text-white",
     soft: "bg-person-grandfather-soft text-person-grandfather",
     ring: "ring-person-grandfather",
   },
   {
     id: "father",
-    label: "Far",
+    label: "Pappa",
     color: "bg-person-father text-white",
     soft: "bg-person-father-soft text-person-father",
     ring: "ring-person-father",
