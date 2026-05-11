@@ -20,6 +20,7 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "event", label: "Arrangementer" },
   { key: "birthday", label: "Bursdager" },
   { key: "highlight", label: "Høydepunkter" },
+  { key: "note", label: "Notater" },
 ];
 
 export function entryMatchesFilter(e: CalendarEntry, f: FilterKey) {
