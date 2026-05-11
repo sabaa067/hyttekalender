@@ -52,6 +52,12 @@
   --color-person-father-soft: var(--person-father-soft);
   --color-person-uncle: var(--person-uncle);
   --color-person-uncle-soft: var(--person-uncle-soft);
+  --color-event-birthday: var(--event-birthday);
+  --color-event-birthday-soft: var(--event-birthday-soft);
+  --color-event-event: var(--event-event);
+  --color-event-event-soft: var(--event-event-soft);
+  --color-event-highlight: var(--event-highlight);
+  --color-event-highlight-soft: var(--event-highlight-soft);
   --color-chart-1: var(--chart-1);
   --color-chart-2: var(--chart-2);
   --color-chart-3: var(--chart-3);
@@ -96,6 +102,14 @@
   --person-father-soft: oklch(0.93 0.04 155);
   --person-uncle: oklch(0.7 0.15 55);
   --person-uncle-soft: oklch(0.94 0.05 65);
+
+  /* Event colors */
+  --event-birthday: oklch(0.65 0.18 340);
+  --event-birthday-soft: oklch(0.95 0.04 340);
+  --event-event: oklch(0.55 0.08 280);
+  --event-event-soft: oklch(0.94 0.025 280);
+  --event-highlight: oklch(0.6 0.14 30);
+  --event-highlight-soft: oklch(0.95 0.035 30);
 
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
