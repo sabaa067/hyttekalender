@@ -29,9 +29,9 @@ export const askAssistant = createServerFn({ method: "POST" })
           category: z.enum(["cabin", "birthday", "event", "highlight", "note"]),
           start_date: z.string(),
           end_date: z.string(),
-          description: z.string().nullable(),
+          description: z.string().optional(),
         })
-        .nullable(),
+        .optional(),
     });
 
     const system = [
