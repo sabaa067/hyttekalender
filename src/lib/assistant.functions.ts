@@ -7,14 +7,29 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((data: { query: string }) => z.object({ query: z.string().min(1).max(500) }).parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("AI er ikke konfigurert");
+    const fallback = {
+      intent: "answer" as const,
+      reply:
+        'Jeg forstod ikke helt spørsmålet. Prøv for eksempel: "Hva skjer 11 juni?" eller "Legg inn hyttetur 12–15 juli".',
+    };
 
-    const { data: entries, error } = await supabaseAdmin
-      .from("calendar_entries")
-      .select("title,category,start_date,end_date,description")
-      .order("start_date", { ascending: true });
-    if (error) throw new Error(error.message);
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) {
+      console.error("[assistant] missing LOVABLE_API_KEY");
+      return fallback;
+    }
+
+    let entries: unknown[] = [];
+    try {
+      const res = await supabaseAdmin
+        .from("calendar_entries")
+        .select("title,category,start_date,end_date,description")
+        .order("start_date", { ascending: true });
+      if (res.error) throw res.error;
+      entries = res.data ?? [];
+    } catch (e) {
+      console.error("[assistant] db error:", e);
+    }
 
     const today = new Date().toISOString().slice(0, 10);
     const gateway = createLovableAiGatewayProvider(apiKey);
@@ -61,10 +76,6 @@ export const askAssistant = createServerFn({ method: "POST" })
       return experimental_output;
     } catch (err) {
       console.error("[assistant] schema/parse error:", err);
-      return {
-        intent: "answer" as const,
-        reply:
-          "Jeg forstod ikke helt spørsmålet. Prøv for eksempel: \"Hva skjer 11 juni?\" eller \"Legg inn hyttetur 12–15 juli\".",
-      };
+      return fallback;
     }
   });
