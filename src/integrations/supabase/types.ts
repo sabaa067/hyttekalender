@@ -113,7 +113,7 @@ export type Database = {
     }
     Enums: {
       booking_person: "grandfather" | "father" | "uncle"
-      entry_category: "cabin" | "birthday" | "event" | "highlight"
+      entry_category: "cabin" | "birthday" | "event" | "highlight" | "note"
       event_type: "birthday" | "event" | "highlight"
     }
     CompositeTypes: {
@@ -243,7 +243,7 @@ export const Constants = {
   public: {
     Enums: {
       booking_person: ["grandfather", "father", "uncle"],
-      entry_category: ["cabin", "birthday", "event", "highlight"],
+      entry_category: ["cabin", "birthday", "event", "highlight", "note"],
       event_type: ["birthday", "event", "highlight"],
     },
   },
