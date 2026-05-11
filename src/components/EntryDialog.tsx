@@ -86,8 +86,8 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md rounded-3xl">
-        <DialogHeader>
+      <DialogContent className="max-w-md rounded-3xl flex max-h-[90vh] flex-col gap-0 p-0">
+        <DialogHeader className="shrink-0 border-b border-border px-6 pb-4 pt-6">
           <DialogTitle className="text-2xl">
             {isEdit ? "Rediger" : "Ny oppføring"}
           </DialogTitle>
@@ -96,7 +96,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-5 py-2">
+        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-5">
           <div>
             <p className="mb-3 text-base font-medium text-foreground">Kategori</p>
             <div className="grid grid-cols-2 gap-2">
@@ -173,7 +173,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry }: Props) {
           </div>
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-2">
+        <DialogFooter className="shrink-0 gap-2 border-t border-border bg-background px-6 py-4 sm:gap-2 rounded-b-3xl">
           <Button
             variant="ghost"
             size="lg"
