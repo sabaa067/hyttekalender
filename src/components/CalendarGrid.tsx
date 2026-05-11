@@ -62,7 +62,7 @@ export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) 
               type="button"
               onClick={() => inMonth && onDayClick(date)}
               className={cn(
-                "relative flex min-h-[72px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[96px] sm:p-2",
+                "relative flex min-h-[88px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[120px] sm:p-2",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
                 meta ? meta.soft : "bg-secondary/40 text-foreground hover:bg-secondary",
