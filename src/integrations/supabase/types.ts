@@ -14,7 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      bookings: {
+        Row: {
+          created_at: string
+          end_date: string
+          id: string
+          person: Database["public"]["Enums"]["booking_person"]
+          start_date: string
+        }
+        Insert: {
+          created_at?: string
+          end_date: string
+          id?: string
+          person: Database["public"]["Enums"]["booking_person"]
+          start_date: string
+        }
+        Update: {
+          created_at?: string
+          end_date?: string
+          id?: string
+          person?: Database["public"]["Enums"]["booking_person"]
+          start_date?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +46,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      booking_person: "grandfather" | "father" | "uncle"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +173,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      booking_person: ["grandfather", "father", "uncle"],
+    },
   },
 } as const
