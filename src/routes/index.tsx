@@ -186,6 +186,7 @@ function Index() {
             onClick={() => {
               setEditingEntry(null);
               setInitialDate(null);
+              setDraftEntry(null);
               setEntryOpen(true);
             }}
           >
