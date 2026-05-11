@@ -37,21 +37,34 @@ export const askAssistant = createServerFn({ method: "POST" })
     const system = [
       "Du er en hjelpsom assistent for en norsk familiekalender.",
       `Dagens dato er ${today}. Året er ${new Date().getFullYear()}.`,
-      "Kategorier: cabin (hytte), birthday (bursdag), event (arrangement), highlight (høydepunkt), note (notat).",
-      "Hvis brukeren vil legge til noe: sett intent='create' og fyll ut draft. Velg passende kategori, lag en kort, ryddig tittel. description=null hvis ikke nødvendig.",
-      "Hvis brukeren spør om noe: sett intent='answer', draft=null. Svar kort og presist på norsk basert på kalenderdataene under. Hvis ingenting passer, si det vennlig.",
-      "Tolk datoer på norsk (f.eks. '17 mai' = 17. mai i år, '12-15 juli' = 2026-07-12 til 2026-07-15).",
+      "Du må være TÅLMODIG og TOLERANT for: skrivefeil, dialekt (f.eks. 'ka' = 'hva', 'verer' = 'være', 'hvilkene' = 'hvilke'), manglende tegnsetting, små bokstaver, korte fragmenter, og uformell norsk.",
+      "Tolk navn og titler FUZZY — match selv ved skrivefeil (f.eks. 'morten' matcher 'Mortens familie', 'paradis' matcher 'Paradiset'). Bruk skjønn.",
+      "Forstå norske månedsnavn og forkortelser (jan, feb, mar, apr, mai, jun, jul, aug, sep, okt, nov, des). Tolk datoer fritt: '12 til 15 juli' = 2026-07-12 til 2026-07-15. '21 jan til 23' = 2026-01-21 til 2026-01-23. '17 mai' = 2026-05-17.",
+      "Kategorier: cabin (hytte/hyttetur/opphold), birthday (bursdag/fødselsdag), event (arrangement/møte/tur), highlight (høydepunkt/spesielt), note (notat/påminnelse).",
+      "Hvis brukeren vil legge til noe: sett intent='create' og fyll ut draft (title, category, start_date, end_date YYYY-MM-DD). Lag en kort, ryddig tittel. La 'description' være tom om unødvendig.",
+      "Hvis brukeren spør om noe: sett intent='answer'. Svar kort (1-3 setninger), vennlig og presist basert på kalenderdataene. Søk fuzzy i title/description.",
+      "Hvis du er usikker: gjør ditt beste forsøk og still ETT kort oppklaringsspørsmål i 'reply' (f.eks. 'Mente du Mortens familie?'). Aldri si 'feil' eller 'kunne ikke tolke'.",
+      "Hvis ingenting matcher: svar vennlig som 'Fant ingenting på den datoen' i stedet for å feile.",
+      "Svar ALLTID på norsk. ALDRI på engelsk.",
       "",
       "KALENDERDATA (JSON):",
       JSON.stringify(entries ?? []),
     ].join("\n");
 
-    const { experimental_output } = await generateText({
-      model,
-      system,
-      prompt: data.query,
-      experimental_output: Output.object({ schema: ResultSchema }),
-    });
-
-    return experimental_output;
+    try {
+      const { experimental_output } = await generateText({
+        model,
+        system,
+        prompt: data.query,
+        experimental_output: Output.object({ schema: ResultSchema }),
+      });
+      return experimental_output;
+    } catch (err) {
+      console.error("[assistant] schema/parse error:", err);
+      return {
+        intent: "answer" as const,
+        reply:
+          "Jeg forstod ikke helt spørsmålet. Prøv for eksempel: \"Hva skjer 11 juni?\" eller \"Legg inn hyttetur 12–15 juli\".",
+      };
+    }
   });
