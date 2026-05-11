@@ -23,7 +23,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     try {
       const res = await supabaseAdmin
         .from("calendar_entries")
-        .select("title,category,start_date,end_date,description")
+        .select("id,title,category,start_date,end_date,description")
         .order("start_date", { ascending: true });
       if (res.error) throw res.error;
       entries = res.data ?? [];
@@ -47,6 +47,7 @@ export const askAssistant = createServerFn({ method: "POST" })
           description: z.string().optional(),
         })
         .optional(),
+      matched_ids: z.array(z.string()).optional(),
     });
 
     const system = [
@@ -58,6 +59,7 @@ export const askAssistant = createServerFn({ method: "POST" })
       "Kategorier: cabin (hytte/hyttetur/opphold), birthday (bursdag/fødselsdag), event (arrangement/møte/tur), highlight (høydepunkt/spesielt), note (notat/påminnelse).",
       "Hvis brukeren vil legge til noe: sett intent='create' og fyll ut draft (title, category, start_date, end_date YYYY-MM-DD). Lag en kort, ryddig tittel. La 'description' være tom om unødvendig.",
       "Hvis brukeren spør om noe: sett intent='answer'. Svar kort (1-3 setninger), vennlig og presist basert på kalenderdataene. Søk fuzzy i title/description.",
+      "Når svaret refererer til konkrete kalenderoppføringer: list opp deres 'id' (UUID fra dataene) i 'matched_ids'. Aldri finn på id-er — bruk bare id-er som finnes i KALENDERDATA.",
       "Hvis du er usikker: gjør ditt beste forsøk og still ETT kort oppklaringsspørsmål i 'reply' (f.eks. 'Mente du Mortens familie?'). Aldri si 'feil' eller 'kunne ikke tolke'.",
       "Hvis ingenting matcher: svar vennlig som 'Fant ingenting på den datoen' i stedet for å feile.",
       "Svar ALLTID på norsk. ALDRI på engelsk.",
