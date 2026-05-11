@@ -77,27 +77,7 @@ export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) 
               >
                 {date.getDate()}
               </span>
-              <div className="mt-auto flex flex-col gap-0.5">
-                {dayEntries.slice(0, 2).map((e) => {
-                  const m = CATEGORY_META[e.category];
-                  return (
-                    <div
-                      key={e.id}
-                      className={cn(
-                        "truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
-                        m.color,
-                      )}
-                    >
-                      {e.title}
-                    </div>
-                  );
-                })}
-                {dayEntries.length > 2 && (
-                  <span className="text-[10px] font-medium text-muted-foreground">
-                    +{dayEntries.length - 2} til
-                  </span>
-                )}
-              </div>
+              <DayEntries entries={dayEntries} />
             </button>
           );
         })}
