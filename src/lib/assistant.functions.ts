@@ -5,12 +5,34 @@ import { createLovableAiGatewayProvider } from "./ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 export const askAssistant = createServerFn({ method: "POST" })
-  .inputValidator((data: { query: string }) => z.object({ query: z.string().min(1).max(500) }).parse(data))
+  .inputValidator((data: { query: string; context?: unknown }) =>
+    z
+      .object({
+        query: z.string().min(1).max(500),
+        context: z
+          .object({
+            today: z.string().optional(),
+            view: z.enum(["modern", "overview", "excel"]).optional(),
+            visibleMonth: z.string().optional(), // YYYY-MM
+            visibleYear: z.number().optional(),
+            activeFilters: z.array(z.string()).optional(),
+            activeCabinLocations: z.array(z.string()).optional(),
+            showHolidays: z.boolean().optional(),
+          })
+          .optional(),
+      })
+      .parse(data),
+  )
   .handler(async ({ data }) => {
     const fallback = {
       intent: "answer" as const,
       reply:
         'Jeg forstod ikke helt spørsmålet. Prøv for eksempel: "Hva skjer 11 juni?" eller "Legg inn hyttetur 12–15 juli".',
+      suggestions: [
+        "Hva skjer 17. mai?",
+        "Når er Mortens familie på Paradis?",
+        "Vis alle hytteturer i juli",
+      ] as string[],
     };
 
     const apiKey = process.env.LOVABLE_API_KEY;
@@ -48,20 +70,38 @@ export const askAssistant = createServerFn({ method: "POST" })
         })
         .optional(),
       matched_ids: z.array(z.string()).optional(),
+      suggestions: z.array(z.string()).max(4).optional(),
     });
 
+    const ctx = data.context ?? {};
     const system = [
       "Du er en hjelpsom assistent for en norsk familiekalender.",
       `Dagens dato er ${today}. Året er ${new Date().getFullYear()}.`,
+      "",
+      "AKTIV KONTEKST I APPEN (bruk for å tolke 'denne uka', 'denne måneden', 'nå'):",
+      `- Modus: ${ctx.view ?? "modern"} (Moderne=månedsvisning, Oversikt=årsvisning, Excel=tabell).`,
+      `- Synlig måned: ${ctx.visibleMonth ?? "–"}. Synlig år: ${ctx.visibleYear ?? new Date().getFullYear()}.`,
+      `- Aktive kategorifilter: ${(ctx.activeFilters && ctx.activeFilters.length ? ctx.activeFilters.join(", ") : "ingen (viser alt)")}.`,
+      `- Aktive hyttesteder: ${(ctx.activeCabinLocations && ctx.activeCabinLocations.length ? ctx.activeCabinLocations.join(", ") : "alle")}.`,
+      `- Høytider vises: ${ctx.showHolidays ? "ja" : "nei"}.`,
+      "",
+      "FUNKSJONER OG BEGREPER DU MÅ KJENNE:",
+      "- Kategorier: Hytte (cabin), Arrangementer (event), Høydepunkter (highlight, inkl. bursdager), Notater (note), Høytider (holiday – norske helligdager, generert automatisk).",
+      "- Hytte har to steder: 'Paradis' og 'Fjordgløtt'. Brukere kan velge ett eller begge samtidig.",
+      "- Norske høytider er gjentakende hvert år (Påske, 17. mai, Jul, osv.) og ligger som 'holiday'.",
+      "- En dag kan ha mange overlappende oppføringer; flere filtre kan kombineres samtidig.",
+      "- Kalenderen støtter både historiske og fremtidige datoer – svar gjerne om det som har skjedd.",
+      "",
       "Du må være TÅLMODIG og TOLERANT for: skrivefeil, dialekt (f.eks. 'ka' = 'hva', 'verer' = 'være', 'hvilkene' = 'hvilke'), manglende tegnsetting, små bokstaver, korte fragmenter, og uformell norsk.",
-      "Tolk navn og titler FUZZY — match selv ved skrivefeil (f.eks. 'morten' matcher 'Mortens familie', 'paradis' matcher 'Paradiset'). Bruk skjønn.",
+      "Tolk navn og titler FUZZY — match selv ved skrivefeil (f.eks. 'morten' matcher 'Mortens familie', 'paradis' matcher 'Paradiset', 'fjordglot' matcher 'Fjordgløtt'). Bruk skjønn.",
       "Forstå norske månedsnavn og forkortelser (jan, feb, mar, apr, mai, jun, jul, aug, sep, okt, nov, des). Tolk datoer fritt: '12 til 15 juli' = 2026-07-12 til 2026-07-15. '21 jan til 23' = 2026-01-21 til 2026-01-23. '17 mai' = 2026-05-17.",
-      "Kategorier: cabin (hytte/hyttetur/opphold), birthday (bursdag/fødselsdag), event (arrangement/møte/tur), highlight (høydepunkt/spesielt), note (notat/påminnelse).",
       "Hvis brukeren vil legge til noe: sett intent='create' og fyll ut draft (title, category, start_date, end_date YYYY-MM-DD). Lag en kort, ryddig tittel. La 'description' være tom om unødvendig.",
       "Hvis brukeren spør om noe: sett intent='answer'. Svar kort (1-3 setninger), vennlig og presist basert på kalenderdataene. Søk fuzzy i title/description.",
+      "Foretrekk strukturerte svar: punktlister når du lister flere oppføringer, korte avsnitt ellers. Aldri lange tekstvegger.",
       "Når svaret refererer til konkrete kalenderoppføringer: list opp deres 'id' (UUID fra dataene) i 'matched_ids'. Aldri finn på id-er — bruk bare id-er som finnes i KALENDERDATA.",
-      "Hvis du er usikker: gjør ditt beste forsøk og still ETT kort oppklaringsspørsmål i 'reply' (f.eks. 'Mente du Mortens familie?'). Aldri si 'feil' eller 'kunne ikke tolke'.",
-      "Hvis ingenting matcher: svar vennlig som 'Fant ingenting på den datoen' i stedet for å feile.",
+      "Hvis du er usikker eller ingenting matcher: svar vennlig og foreslå 2-4 konkrete omformuleringer i 'suggestions' som komplette, klikkbare spørsmål (f.eks. 'Når er Mortens familie på Paradis?', 'Hva skjer 17. juni?'). Aldri si 'feil', 'kunne ikke tolke' eller vis tekniske feilmeldinger.",
+      "Eksempel: bruker skriver 'når skal morten på hyta' → reply: 'Mente du noe av dette?' og suggestions: ['Når skal Mortens familie på hytta?', 'Når er Mortens familie på Paradis?', 'Når er Mortens familie på Fjordgløtt?'].",
+      "Eksempel: bruker skriver 'hva skjer 17 jn' → suggestions: ['Hva skjer 17. juni?', 'Hva skjer 17. januar?', 'Hva skjer 17. juli?'].",
       "Svar ALLTID på norsk. ALDRI på engelsk.",
       "",
       "KALENDERDATA (JSON):",
