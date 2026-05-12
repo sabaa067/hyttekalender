@@ -1,6 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 import { detectCabinLocations, type CabinLocation, type Category } from "./categories";
 
+// Categories persisted in the DB (holiday is virtual, generated client-side).
+type DBCategory = Exclude<Category, "holiday">;
+
 export type CalendarEntry = {
   id: string;
   title: string;
@@ -61,7 +64,7 @@ export async function createEntry(input: {
 }): Promise<CalendarEntry> {
   const { data, error } = await supabase
     .from("calendar_entries")
-    .insert(input)
+    .insert(input as { category: DBCategory; title: string; start_date: string; end_date: string; description?: string | null })
     .select()
     .single();
   if (error) throw new Error(error.message);
@@ -72,7 +75,10 @@ export async function updateEntry(
   id: string,
   patch: Partial<Omit<CalendarEntry, "id" | "created_at" | "updated_at">>,
 ): Promise<void> {
-  const { error } = await supabase.from("calendar_entries").update(patch).eq("id", id);
+  const { error } = await supabase
+    .from("calendar_entries")
+    .update(patch as Partial<{ category: DBCategory; title: string; start_date: string; end_date: string; description: string | null }>)
+    .eq("id", id);
   if (error) throw new Error(error.message);
 }
 
