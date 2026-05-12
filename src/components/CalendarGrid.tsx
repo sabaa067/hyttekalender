@@ -57,8 +57,6 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
         {cells.map(({ date, inMonth }, idx) => {
           const iso = toISODate(date);
           const dayEntries = visible.filter((e) => entryCoversDate(e, iso));
-          const primary = dayEntries[0];
-          const primaryVisual = primary ? getEntryVisual(primary) : null;
           const isToday = iso === todayISO;
 
           return (
@@ -70,7 +68,7 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
                 "relative flex min-h-[100px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[140px] sm:p-2",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
-                primaryVisual ? primaryVisual.soft : "bg-secondary/40 text-foreground hover:bg-secondary",
+                "bg-secondary/30 text-foreground hover:bg-secondary/60",
                 isToday && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
               )}
             >
