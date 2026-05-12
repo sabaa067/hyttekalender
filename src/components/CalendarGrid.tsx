@@ -69,13 +69,15 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
                 "bg-secondary/30 text-foreground hover:bg-secondary/60",
-                isToday && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
+                isToday &&
+                  "bg-primary/10 ring-2 ring-primary/60 ring-offset-2 ring-offset-card shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]",
               )}
             >
               <span
                 className={cn(
                   "text-base font-semibold sm:text-lg",
-                  isToday && "font-bold",
+                  isToday &&
+                    "inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary font-bold text-primary-foreground shadow-sm",
                 )}
               >
                 {date.getDate()}
