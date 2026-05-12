@@ -87,12 +87,13 @@ function Index() {
     [entries, holidayEntries],
   );
 
-  // Holidays bypass category filters: ensure they always pass when showHolidays is on.
+  // Holidays are an overlay. When category filters are active, inject "holiday"
+  // so holiday entries also pass; when no filters are active everything shows
+  // already so we leave the set empty.
   const effectiveFilters = useMemo<Set<FilterKey>>(() => {
-    if (!showHolidays) return filters;
-    const next = new Set<FilterKey>(filters);
-    // Treat "holiday" as a virtual filter key by injecting it; entries.ts ignores unknown keys.
-    (next as Set<string>).add("holiday");
+    if (!showHolidays || filters.size === 0) return filters;
+    const next = new Set<string>(filters);
+    next.add("holiday");
     return next as Set<FilterKey>;
   }, [filters, showHolidays]);
 
