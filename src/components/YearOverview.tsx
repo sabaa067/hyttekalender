@@ -87,18 +87,26 @@ function MiniMonth({
               disabled={!inMonth}
               onClick={() => inMonth && onDayClick(date)}
               className={cn(
-                "relative flex aspect-square items-center justify-center rounded-md text-xs transition-all",
+                "relative flex aspect-square flex-col items-center justify-start gap-0.5 overflow-hidden rounded-md p-0.5 text-xs transition-all",
                 inMonth ? "cursor-pointer hover:scale-110" : "opacity-0 pointer-events-none",
                 v ? v.soft : "text-foreground hover:bg-secondary",
                 isToday && "ring-1 ring-foreground",
               )}
               title={dayEntries.map((e) => e.title).join(", ")}
             >
-              <span className={cn(isToday && "font-bold")}>{date.getDate()}</span>
-              {dayEntries.length > 1 && (
-                <span className="absolute bottom-0.5 right-0.5 text-[8px] font-bold opacity-70">
-                  +{dayEntries.length - 1}
-                </span>
+              <span className={cn("leading-none", isToday && "font-bold")}>{date.getDate()}</span>
+              {dayEntries.length > 0 && (
+                <div className="mt-auto flex w-full flex-col gap-px">
+                  {dayEntries.map((e) => {
+                    const ev = getEntryVisual(e);
+                    return (
+                      <span
+                        key={e.id}
+                        className={cn("h-1 w-full rounded-sm", ev.color)}
+                      />
+                    );
+                  })}
+                </div>
               )}
             </button>
           );
