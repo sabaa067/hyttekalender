@@ -1,13 +1,15 @@
 import { useMemo } from "react";
+import { Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   type CalendarEntry,
   toISODate,
   entryCoversDate,
   entryMatchesFilter,
+  entryMatchesCabinLocation,
   type FilterKey,
 } from "@/lib/entries";
-import { CATEGORY_META } from "@/lib/categories";
+import { CATEGORY_META, isBirthdayEntry, type CabinLocation } from "@/lib/categories";
 
 const WEEKDAYS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
 
@@ -15,10 +17,11 @@ type Props = {
   monthDate: Date;
   entries: CalendarEntry[];
   filter: FilterKey;
+  cabinLocation: CabinLocation;
   onDayClick: (date: Date) => void;
 };
 
-export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) {
+export function CalendarGrid({ monthDate, entries, filter, cabinLocation, onDayClick }: Props) {
   const cells = useMemo(() => {
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth();
@@ -34,7 +37,9 @@ export function CalendarGrid({ monthDate, entries, filter, onDayClick }: Props) 
   }, [monthDate]);
 
   const todayISO = toISODate(new Date());
-  const visible = entries.filter((e) => entryMatchesFilter(e, filter));
+  const visible = entries.filter(
+    (e) => entryMatchesFilter(e, filter) && entryMatchesCabinLocation(e, cabinLocation),
+  );
 
   return (
     <div className="rounded-3xl bg-card p-3 shadow-sm sm:p-5">
@@ -126,15 +131,24 @@ function DayEntries({ entries }: { entries: CalendarEntry[] }) {
 
 function EntryChip({ entry }: { entry: CalendarEntry }) {
   const m = CATEGORY_META[entry.category];
+  const isBday = isBirthdayEntry(entry);
+  // Stronger blocks for cabin, soft tint for highlight, medium for event, minimal for note.
+  const style =
+    entry.category === "cabin"
+      ? m.color
+      : entry.category === "note"
+      ? "bg-card border border-border text-foreground"
+      : m.soft;
   return (
     <div
       className={cn(
-        "truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
-        m.color,
+        "flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
+        style,
       )}
       title={entry.title}
     >
-      {entry.title}
+      {isBday && <Cake className="h-3 w-3 shrink-0" />}
+      <span className="truncate">{entry.title}</span>
     </div>
   );
 }
