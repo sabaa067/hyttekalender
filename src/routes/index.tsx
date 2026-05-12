@@ -147,6 +147,14 @@ function Index() {
 
         <AssistantBar
           entries={entries}
+          context={{
+            view,
+            visibleMonth: monthDate,
+            visibleYear: year,
+            activeFilters: filters,
+            activeCabinLocations: cabinLocations,
+            showHolidays,
+          }}
           onEditDraft={(d) => {
             setEditingEntry(null);
             setInitialDate(null);
