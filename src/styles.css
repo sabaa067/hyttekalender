@@ -56,6 +56,8 @@
   --color-cat-highlight-soft: var(--cat-highlight-soft);
   --color-cat-note: var(--cat-note);
   --color-cat-note-soft: var(--cat-note-soft);
+  --color-cat-holiday: var(--cat-holiday);
+  --color-cat-holiday-soft: var(--cat-holiday-soft);
   --color-cabin-paradis: var(--cabin-paradis);
   --color-cabin-paradis-soft: var(--cabin-paradis-soft);
   --color-cabin-fjord: var(--cabin-fjord);
@@ -115,6 +117,9 @@
   /* Notater = slate gray */
   --cat-note: oklch(0.45 0.02 250);
   --cat-note-soft: oklch(0.93 0.01 250);
+  /* Høytider = warm gold/amber (distinct from highlight orange) */
+  --cat-holiday: oklch(0.7 0.13 85);
+  --cat-holiday-soft: oklch(0.95 0.06 90);
 
   /* Cabin location subcategories — clearly distinct from main hytte green */
   --cabin-paradis: oklch(0.5 0.2 25);          /* deep red */
