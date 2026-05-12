@@ -17,6 +17,8 @@ import {
   type CalendarEntry,
 } from "@/lib/entries";
 import { CABIN_LOCATION_META, CATEGORY_META, type CabinLocation } from "@/lib/categories";
+
+type CabinLoc = Exclude<CabinLocation, "all">;
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
@@ -27,8 +29,33 @@ type ViewMode = "modern" | "overview" | "excel";
 
 function Index() {
   const [view, setView] = useState<ViewMode>("modern");
-  const [filter, setFilter] = useState<FilterKey>("all");
-  const [cabinLocation, setCabinLocation] = useState<CabinLocation>("all");
+  const [filters, setFilters] = useState<Set<FilterKey>>(() => new Set());
+  const [cabinLocations, setCabinLocations] = useState<Set<CabinLoc>>(() => new Set());
+
+  const toggleFilter = (key: FilterKey) => {
+    setFilters((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      // If hytte is removed, clear cabin sub-locations.
+      if (!next.has("cabin")) setCabinLocations(new Set());
+      return next;
+    });
+  };
+  const toggleCabinLoc = (key: CabinLoc) => {
+    setCabinLocations((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+    // Selecting a sub-location implies hytte filter is on.
+    setFilters((prev) => (prev.has("cabin") ? prev : new Set(prev).add("cabin")));
+  };
+  const clearAll = () => {
+    setFilters(new Set());
+    setCabinLocations(new Set());
+  };
   const [monthDate, setMonthDate] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -119,23 +146,31 @@ function Index() {
 
         <div className="flex flex-col items-center gap-2">
           <div className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              type="button"
+              onClick={clearAll}
+              className={cn(
+                "rounded-full px-4 py-2 text-sm font-medium transition-all sm:text-base",
+                filters.size === 0 && cabinLocations.size === 0
+                  ? "bg-foreground text-background shadow-md"
+                  : "bg-card text-muted-foreground hover:bg-secondary",
+              )}
+            >
+              Alt
+            </button>
             {FILTERS.map((f) => {
-              const active = filter === f.key;
-              const meta = f.key !== "all" ? CATEGORY_META[f.key] : null;
+              const active = filters.has(f.key);
+              const meta = CATEGORY_META[f.key];
               return (
                 <button
                   key={f.key}
                   type="button"
-                  onClick={() => {
-                    setFilter(f.key);
-                    if (f.key !== "cabin") setCabinLocation("all");
-                  }}
+                  onClick={() => toggleFilter(f.key)}
                   className={cn(
-                    "rounded-full px-4 py-2 text-sm font-medium transition-all sm:text-base",
+                    "rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 sm:text-base",
                     active
-                      ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
-                      : "opacity-80 hover:opacity-100",
-                    meta ? meta.soft : "bg-card text-foreground",
+                      ? cn(meta.color, "border-transparent shadow-md scale-[1.03]")
+                      : cn(meta.soft, "border-current/20 opacity-80 hover:opacity-100 hover:scale-[1.02]"),
                   )}
                 >
                   {f.label}
@@ -143,22 +178,21 @@ function Index() {
               );
             })}
           </div>
-          {filter === "cabin" && (
-            <div className="flex flex-wrap items-center justify-center gap-2">
+          {filters.has("cabin") && (
+            <div className="flex flex-wrap items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
               {(["paradis", "fjord", "begge"] as const).map((loc) => {
                 const meta = CABIN_LOCATION_META[loc];
-                const active = cabinLocation === loc;
+                const active = cabinLocations.has(loc);
                 return (
                   <button
                     key={loc}
                     type="button"
-                    onClick={() => setCabinLocation(active ? "all" : loc)}
+                    onClick={() => toggleCabinLoc(loc)}
                     className={cn(
-                      "rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:text-sm",
-                      meta.soft,
+                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:text-sm",
                       active
-                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
-                        : "opacity-80 hover:opacity-100",
+                        ? cn(meta.color, "border-transparent shadow-md scale-[1.03]")
+                        : cn(meta.soft, "border-current/20 opacity-80 hover:opacity-100 hover:scale-[1.02]"),
                     )}
                   >
                     {meta.label}
@@ -201,8 +235,8 @@ function Index() {
           <CalendarGrid
             monthDate={monthDate}
             entries={entries}
-            filter={filter}
-            cabinLocation={cabinLocation}
+            filters={filters}
+            cabinLocations={cabinLocations}
             onDayClick={(d) => setDetailDate(d)}
           />
         )}
@@ -210,8 +244,8 @@ function Index() {
           <YearOverview
             year={year}
             entries={entries}
-            filter={filter}
-            cabinLocation={cabinLocation}
+            filters={filters}
+            cabinLocations={cabinLocations}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
               setDetailDate(d);
@@ -222,8 +256,8 @@ function Index() {
           <ExcelView
             year={year}
             entries={entries}
-            filter={filter}
-            cabinLocation={cabinLocation}
+            filters={filters}
+            cabinLocations={cabinLocations}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
               setDetailDate(d);
