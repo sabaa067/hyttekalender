@@ -53,7 +53,7 @@ export function isBirthdayEntry(e: { title: string; category: Category }): boole
   return /bursdag|fødselsdag|år\b/i.test(e.title);
 }
 
-export type CabinLocation = "all" | "paradis" | "fjord" | "begge";
+export type CabinLocation = "all" | "paradis" | "fjord";
 
 export const CABIN_LOCATION_META: Record<
   Exclude<CabinLocation, "all">,
@@ -69,21 +69,20 @@ export const CABIN_LOCATION_META: Record<
     color: "bg-cabin-fjord text-white",
     soft: "bg-cabin-fjord-soft text-cabin-fjord",
   },
-  begge: {
-    label: "Begge",
-    color: "bg-cabin-begge text-white",
-    soft: "bg-cabin-begge-soft text-cabin-begge",
-  },
 };
 
-export function detectCabinLocation(text: string): Exclude<CabinLocation, "all"> | null {
+export function detectCabinLocations(text: string): Set<Exclude<CabinLocation, "all">> {
   const t = text.toLowerCase();
-  const par = /paradis/.test(t);
-  const fjo = /fjordgl(ø|o)tt|fjordglott/.test(t);
-  if (par && fjo) return "begge";
-  if (par) return "paradis";
-  if (fjo) return "fjord";
-  return null;
+  const out = new Set<Exclude<CabinLocation, "all">>();
+  if (/paradis/.test(t)) out.add("paradis");
+  if (/fjordgl(ø|o)tt|fjordglott/.test(t)) out.add("fjord");
+  return out;
+}
+
+// Returns the primary location for an entry (first match), used for coloring.
+export function primaryCabinLocation(text: string): Exclude<CabinLocation, "all"> | null {
+  const locs = detectCabinLocations(text);
+  return locs.has("paradis") ? "paradis" : locs.has("fjord") ? "fjord" : null;
 }
 
 export type EntryVisual = {
@@ -98,7 +97,7 @@ export type EntryVisual = {
 export function getEntryVisual(e: { title: string; category: Category; description?: string | null }): EntryVisual {
   const meta = CATEGORY_META[e.category];
   if (e.category === "cabin") {
-    const loc = detectCabinLocation(`${e.title} ${e.description ?? ""}`);
+    const loc = primaryCabinLocation(`${e.title} ${e.description ?? ""}`);
     if (loc) {
       const lm = CABIN_LOCATION_META[loc];
       return { color: lm.color, soft: lm.soft, icon: meta.icon, label: `Hytte · ${lm.label}`, weight: "strong" };
