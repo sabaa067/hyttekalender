@@ -5,11 +5,11 @@ import {
   type CalendarEntry,
   toISODate,
   entryCoversDate,
-  entryMatchesFilter,
-  entryMatchesCabinLocation,
+  entryMatchesFilters,
+  entryMatchesCabinLocations,
   type FilterKey,
 } from "@/lib/entries";
-import { CATEGORY_META, isBirthdayEntry, type CabinLocation } from "@/lib/categories";
+import { getEntryVisual, isBirthdayEntry, type CabinLocation } from "@/lib/categories";
 
 const MONTHS_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "Mai", "Jun",
@@ -19,18 +19,18 @@ const MONTHS_SHORT = [
 type Props = {
   year: number;
   entries: CalendarEntry[];
-  filter: FilterKey;
-  cabinLocation: CabinLocation;
+  filters: Set<FilterKey>;
+  cabinLocations: Set<Exclude<CabinLocation, "all">>;
   onDayClick: (date: Date) => void;
 };
 
-export function ExcelView({ year, entries, filter, cabinLocation, onDayClick }: Props) {
+export function ExcelView({ year, entries, filters, cabinLocations, onDayClick }: Props) {
   const visible = useMemo(
     () =>
       entries.filter(
-        (e) => entryMatchesFilter(e, filter) && entryMatchesCabinLocation(e, cabinLocation),
+        (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
       ),
-    [entries, filter, cabinLocation],
+    [entries, filters, cabinLocations],
   );
 
   const todayISO = toISODate(new Date());
@@ -89,14 +89,16 @@ export function ExcelView({ year, entries, filter, cabinLocation, onDayClick }: 
                     >
                       <div className="flex flex-col gap-0.5">
                         {dayEntries.map((e) => {
-                          const m = CATEGORY_META[e.category];
+                          const v = getEntryVisual(e);
                           const isBday = isBirthdayEntry(e);
                           const style =
-                            e.category === "cabin"
-                              ? m.color
-                              : e.category === "note"
-                              ? "bg-card border border-border text-foreground"
-                              : m.soft;
+                            v.weight === "strong"
+                              ? cn(v.color, "shadow-sm")
+                              : v.weight === "warm"
+                              ? cn(v.soft, "border-l-2 border-cat-highlight")
+                              : v.weight === "medium"
+                              ? v.soft
+                              : "bg-card border border-border text-muted-foreground";
                           return (
                             <div
                               key={e.id}

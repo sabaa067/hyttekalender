@@ -4,11 +4,11 @@ import {
   type CalendarEntry,
   toISODate,
   entryCoversDate,
-  entryMatchesFilter,
-  entryMatchesCabinLocation,
+  entryMatchesFilters,
+  entryMatchesCabinLocations,
   type FilterKey,
 } from "@/lib/entries";
-import { CATEGORY_META, type CabinLocation } from "@/lib/categories";
+import { getEntryVisual, type CabinLocation } from "@/lib/categories";
 
 const MONTH_NAMES = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
@@ -19,14 +19,14 @@ const WEEKDAY_SHORT = ["M", "T", "O", "T", "F", "L", "S"];
 type Props = {
   year: number;
   entries: CalendarEntry[];
-  filter: FilterKey;
-  cabinLocation: CabinLocation;
+  filters: Set<FilterKey>;
+  cabinLocations: Set<Exclude<CabinLocation, "all">>;
   onDayClick: (date: Date) => void;
 };
 
-export function YearOverview({ year, entries, filter, cabinLocation, onDayClick }: Props) {
+export function YearOverview({ year, entries, filters, cabinLocations, onDayClick }: Props) {
   const visible = entries.filter(
-    (e) => entryMatchesFilter(e, filter) && entryMatchesCabinLocation(e, cabinLocation),
+    (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
   );
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -77,7 +77,7 @@ function MiniMonth({
           const iso = toISODate(date);
           const dayEntries = entries.filter((e) => entryCoversDate(e, iso));
           const primary = dayEntries[0];
-          const meta = primary ? CATEGORY_META[primary.category] : null;
+          const v = primary ? getEntryVisual(primary) : null;
           const isToday = iso === todayISO;
 
           return (
@@ -89,7 +89,7 @@ function MiniMonth({
               className={cn(
                 "relative flex aspect-square items-center justify-center rounded-md text-xs transition-all",
                 inMonth ? "cursor-pointer hover:scale-110" : "opacity-0 pointer-events-none",
-                meta ? meta.soft : "text-foreground hover:bg-secondary",
+                v ? v.soft : "text-foreground hover:bg-secondary",
                 isToday && "ring-1 ring-foreground",
               )}
               title={dayEntries.map((e) => e.title).join(", ")}

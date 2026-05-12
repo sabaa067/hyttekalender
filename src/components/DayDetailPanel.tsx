@@ -21,7 +21,7 @@ import {
   entryCoversDate,
   parseISODate,
 } from "@/lib/entries";
-import { CATEGORY_META } from "@/lib/categories";
+import { getEntryVisual } from "@/lib/categories";
 
 type Props = {
   date: Date | null;
@@ -63,20 +63,20 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
           )}
 
           {day.map((e) => {
-            const m = CATEGORY_META[e.category];
-            const Icon = m.icon;
+            const v = getEntryVisual(e);
+            const Icon = v.icon;
             const sameDay = e.start_date === e.end_date;
             return (
               <div
                 key={e.id}
-                className={cn("rounded-2xl p-4", m.soft)}
+                className={cn("rounded-2xl p-4", v.soft)}
               >
                 <div className="flex items-start gap-3">
                   <Icon className="mt-1 h-5 w-5 shrink-0" />
                   <div className="flex-1 min-w-0">
                     <p className="text-lg font-semibold">{e.title}</p>
                     <p className="text-sm opacity-80">
-                      {m.label}
+                      {v.label}
                       {" · "}
                       {sameDay
                         ? format(parseISODate(e.start_date), "d. MMM yyyy", { locale: nb })
