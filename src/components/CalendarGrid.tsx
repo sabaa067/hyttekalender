@@ -37,6 +37,8 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
   }, [monthDate]);
 
   const todayISO = toISODate(new Date());
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
   const visible = entries.filter(
     (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
   );
@@ -58,6 +60,7 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
           const iso = toISODate(date);
           const dayEntries = visible.filter((e) => entryCoversDate(e, iso));
           const isToday = iso === todayISO;
+          const isPast = date.getTime() < todayStart.getTime();
 
           return (
             <button
@@ -69,6 +72,7 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
                 "bg-secondary/30 text-foreground hover:bg-secondary/60",
+                inMonth && isPast && !isToday && "opacity-60 saturate-75",
                 isToday &&
                   "bg-primary/10 ring-2 ring-primary/60 ring-offset-2 ring-offset-card shadow-[0_0_0_4px_hsl(var(--primary)/0.08)]",
               )}
