@@ -132,7 +132,12 @@ function Index() {
   const isEmpty = !isLoading && entries.length === 0;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div
+      className={cn(
+        "min-h-screen transition-colors",
+        view === "modern" ? "bg-secondary/40" : "bg-background",
+      )}
+    >
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 pt-6 sm:gap-6 sm:pt-10">
         <header className="flex flex-col items-center gap-4 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
