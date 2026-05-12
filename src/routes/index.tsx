@@ -180,7 +180,7 @@ function Index() {
           </div>
           {filters.has("cabin") && (
             <div className="flex flex-wrap items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-              {(["paradis", "fjord", "begge"] as const).map((loc) => {
+              {(["paradis", "fjord"] as const).map((loc) => {
                 const meta = CABIN_LOCATION_META[loc];
                 const active = cabinLocations.has(loc);
                 return (
