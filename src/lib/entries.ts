@@ -12,29 +12,35 @@ export type CalendarEntry = {
   updated_at: string;
 };
 
-export type FilterKey = "all" | Category;
+export type FilterKey = Exclude<Category, "birthday">;
 
 export const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "all", label: "Alt" },
   { key: "cabin", label: "Hytte" },
   { key: "event", label: "Arrangementer" },
   { key: "highlight", label: "Høydepunkter" },
   { key: "note", label: "Notater" },
 ];
 
-export function entryMatchesFilter(e: CalendarEntry, f: FilterKey) {
-  if (f === "all") return true;
-  // Birthdays are now folded into "highlight".
+function entryMatchesSingleFilter(e: CalendarEntry, f: FilterKey) {
   if (f === "highlight") return e.category === "highlight" || e.category === "birthday";
   return e.category === f;
 }
 
-export function entryMatchesCabinLocation(e: CalendarEntry, loc: CabinLocation) {
-  if (loc === "all") return true;
+export function entryMatchesFilters(e: CalendarEntry, active: Set<FilterKey>) {
+  if (active.size === 0) return true;
+  for (const f of active) if (entryMatchesSingleFilter(e, f)) return true;
+  return false;
+}
+
+export function entryMatchesCabinLocations(
+  e: CalendarEntry,
+  active: Set<Exclude<CabinLocation, "all">>,
+) {
+  if (active.size === 0) return true;
   if (e.category !== "cabin") return true;
   const detected = detectCabinLocation(`${e.title} ${e.description ?? ""}`);
-  if (loc === "begge") return detected === "begge";
-  return detected === loc;
+  if (!detected) return false;
+  return active.has(detected);
 }
 
 export async function fetchEntries(): Promise<CalendarEntry[]> {
