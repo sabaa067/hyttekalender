@@ -95,7 +95,7 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick }
                             v.weight === "strong"
                               ? cn(v.color, "shadow-sm")
                               : v.weight === "warm"
-                              ? cn(v.soft, "border-l-2 border-cat-highlight")
+                              ? v.soft
                               : v.weight === "medium"
                               ? v.soft
                               : "bg-card border border-border text-muted-foreground";
