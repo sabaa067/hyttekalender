@@ -1,6 +1,6 @@
 import { Home, Cake, Sparkles, CalendarDays, StickyNote, type LucideIcon } from "lucide-react";
 
-export type Category = "cabin" | "birthday" | "event" | "highlight" | "note";
+export type Category = "cabin" | "birthday" | "event" | "highlight" | "note" | "holiday";
 
 export const CATEGORY_META: Record<
   Category,
@@ -41,6 +41,13 @@ export const CATEGORY_META: Record<
     soft: "bg-cat-note-soft text-cat-note",
     dot: "bg-cat-note",
     icon: StickyNote,
+  },
+  holiday: {
+    label: "Høytid",
+    color: "bg-cat-holiday text-white",
+    soft: "bg-cat-holiday-soft text-cat-holiday",
+    dot: "bg-cat-holiday",
+    icon: Sparkles,
   },
 };
 
@@ -106,6 +113,9 @@ export function getEntryVisual(e: { title: string; category: Category; descripti
   }
   if (e.category === "highlight" || e.category === "birthday") {
     return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "warm" };
+  }
+  if (e.category === "holiday") {
+    return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "medium" };
   }
   if (e.category === "event") {
     return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "medium" };
