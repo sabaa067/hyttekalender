@@ -5,9 +5,10 @@ import {
   toISODate,
   entryCoversDate,
   entryMatchesFilter,
+  entryMatchesCabinLocation,
   type FilterKey,
 } from "@/lib/entries";
-import { CATEGORY_META } from "@/lib/categories";
+import { CATEGORY_META, type CabinLocation } from "@/lib/categories";
 
 const MONTH_NAMES = [
   "Januar", "Februar", "Mars", "April", "Mai", "Juni",
@@ -19,11 +20,14 @@ type Props = {
   year: number;
   entries: CalendarEntry[];
   filter: FilterKey;
+  cabinLocation: CabinLocation;
   onDayClick: (date: Date) => void;
 };
 
-export function YearOverview({ year, entries, filter, onDayClick }: Props) {
-  const visible = entries.filter((e) => entryMatchesFilter(e, filter));
+export function YearOverview({ year, entries, filter, cabinLocation, onDayClick }: Props) {
+  const visible = entries.filter(
+    (e) => entryMatchesFilter(e, filter) && entryMatchesCabinLocation(e, cabinLocation),
+  );
   return (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }, (_, m) => (

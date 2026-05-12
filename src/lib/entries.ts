@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import type { Category } from "./categories";
+import { detectCabinLocation, type CabinLocation, type Category } from "./categories";
 
 export type CalendarEntry = {
   id: string;
@@ -18,13 +18,23 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "all", label: "Alt" },
   { key: "cabin", label: "Hytte" },
   { key: "event", label: "Arrangementer" },
-  { key: "birthday", label: "Bursdager" },
   { key: "highlight", label: "Høydepunkter" },
   { key: "note", label: "Notater" },
 ];
 
 export function entryMatchesFilter(e: CalendarEntry, f: FilterKey) {
-  return f === "all" || e.category === f;
+  if (f === "all") return true;
+  // Birthdays are now folded into "highlight".
+  if (f === "highlight") return e.category === "highlight" || e.category === "birthday";
+  return e.category === f;
+}
+
+export function entryMatchesCabinLocation(e: CalendarEntry, loc: CabinLocation) {
+  if (loc === "all") return true;
+  if (e.category !== "cabin") return true;
+  const detected = detectCabinLocation(`${e.title} ${e.description ?? ""}`);
+  if (loc === "begge") return detected === "begge";
+  return detected === loc;
 }
 
 export async function fetchEntries(): Promise<CalendarEntry[]> {

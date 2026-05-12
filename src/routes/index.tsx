@@ -1,11 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays, Table2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { YearOverview } from "@/components/YearOverview";
+import { ExcelView } from "@/components/ExcelView";
 import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
 import { AssistantBar } from "@/components/AssistantBar";
@@ -15,17 +16,19 @@ import {
   type FilterKey,
   type CalendarEntry,
 } from "@/lib/entries";
+import { CABIN_LOCATION_META, CATEGORY_META, type CabinLocation } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
 
-type ViewMode = "modern" | "overview";
+type ViewMode = "modern" | "overview" | "excel";
 
 function Index() {
   const [view, setView] = useState<ViewMode>("modern");
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [cabinLocation, setCabinLocation] = useState<CabinLocation>("all");
   const [monthDate, setMonthDate] = useState(() => {
     const n = new Date();
     return new Date(n.getFullYear(), n.getMonth(), 1);
@@ -106,24 +109,64 @@ function Index() {
             icon={<CalendarDays className="h-4 w-4" />}
             label="Moderne"
           />
+          <ToggleBtn
+            active={view === "excel"}
+            onClick={() => setView("excel")}
+            icon={<Table2 className="h-4 w-4" />}
+            label="Excel"
+          />
         </div>
 
-        <div className="flex flex-wrap items-center justify-center gap-2">
-          {FILTERS.map((f) => (
-            <button
-              key={f.key}
-              type="button"
-              onClick={() => setFilter(f.key)}
-              className={cn(
-                "rounded-full px-4 py-2 text-sm font-medium transition-all sm:text-base",
-                filter === f.key
-                  ? "bg-foreground text-background shadow-sm"
-                  : "bg-card text-muted-foreground hover:bg-secondary",
-              )}
-            >
-              {f.label}
-            </button>
-          ))}
+        <div className="flex flex-col items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {FILTERS.map((f) => {
+              const active = filter === f.key;
+              const meta = f.key !== "all" ? CATEGORY_META[f.key] : null;
+              return (
+                <button
+                  key={f.key}
+                  type="button"
+                  onClick={() => {
+                    setFilter(f.key);
+                    if (f.key !== "cabin") setCabinLocation("all");
+                  }}
+                  className={cn(
+                    "rounded-full px-4 py-2 text-sm font-medium transition-all sm:text-base",
+                    active
+                      ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+                      : "opacity-80 hover:opacity-100",
+                    meta ? meta.soft : "bg-card text-foreground",
+                  )}
+                >
+                  {f.label}
+                </button>
+              );
+            })}
+          </div>
+          {filter === "cabin" && (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              {(["paradis", "fjord", "begge"] as const).map((loc) => {
+                const meta = CABIN_LOCATION_META[loc];
+                const active = cabinLocation === loc;
+                return (
+                  <button
+                    key={loc}
+                    type="button"
+                    onClick={() => setCabinLocation(active ? "all" : loc)}
+                    className={cn(
+                      "rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:text-sm",
+                      meta.soft,
+                      active
+                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-background"
+                        : "opacity-80 hover:opacity-100",
+                    )}
+                  >
+                    {meta.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
 
         <div className="flex items-center justify-between gap-2 rounded-3xl bg-card p-2 shadow-sm sm:p-3">
@@ -154,18 +197,33 @@ function Index() {
           </Button>
         </div>
 
-        {view === "modern" ? (
+        {view === "modern" && (
           <CalendarGrid
             monthDate={monthDate}
             entries={entries}
             filter={filter}
+            cabinLocation={cabinLocation}
             onDayClick={(d) => setDetailDate(d)}
           />
-        ) : (
+        )}
+        {view === "overview" && (
           <YearOverview
             year={year}
             entries={entries}
             filter={filter}
+            cabinLocation={cabinLocation}
+            onDayClick={(d) => {
+              setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
+              setDetailDate(d);
+            }}
+          />
+        )}
+        {view === "excel" && (
+          <ExcelView
+            year={year}
+            entries={entries}
+            filter={filter}
+            cabinLocation={cabinLocation}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
               setDetailDate(d);
