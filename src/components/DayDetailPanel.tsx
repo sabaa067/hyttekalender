@@ -45,6 +45,9 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
   if (!date) return null;
   const iso = toISODate(date);
   const day = entries.filter((e) => entryCoversDate(e, iso));
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const isPast = date.getTime() < todayStart.getTime();
 
   return (
     <Dialog open={!!date} onOpenChange={onOpenChange}>
@@ -58,7 +61,9 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
         <div className="space-y-3 py-2">
           {day.length === 0 && (
             <p className="rounded-2xl bg-secondary/40 p-5 text-center text-base text-muted-foreground">
-              Ingen oppføringer denne dagen.
+              {isPast
+                ? "Ser ikke ut som det er noe her ✨"
+                : "Ingen arrangementer denne dagen"}
             </p>
           )}
 
@@ -114,10 +119,12 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
         </div>
 
         <DialogFooter>
-          <Button size="lg" className="w-full rounded-2xl text-base" onClick={onAdd}>
-            <Plus className="mr-1 h-4 w-4" />
-            Ny oppføring
-          </Button>
+          {!isPast && (
+            <Button size="lg" className="w-full rounded-2xl text-base" onClick={onAdd}>
+              <Plus className="mr-1 h-4 w-4" />
+              Ny oppføring
+            </Button>
+          )}
         </DialogFooter>
       </DialogContent>
     </Dialog>
