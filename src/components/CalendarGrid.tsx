@@ -67,7 +67,7 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
               type="button"
               onClick={() => inMonth && onDayClick(date)}
               className={cn(
-                "relative flex min-h-[88px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[120px] sm:p-2",
+                "relative flex min-h-[100px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[140px] sm:p-2",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
                 primaryVisual ? primaryVisual.soft : "bg-secondary/40 text-foreground hover:bg-secondary",
@@ -92,39 +92,12 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
 }
 
 function DayEntries({ entries }: { entries: CalendarEntry[] }) {
-  // Show as many entries as fit; overflow indicator for the rest.
-  // We use a responsive cap: tighter on mobile, more on larger cells.
-  const MOBILE_MAX = 3;
-  const DESKTOP_MAX = 5;
-  const visibleMobile = entries.slice(0, MOBILE_MAX);
-  const visibleDesktop = entries.slice(0, DESKTOP_MAX);
-  const overflowMobile = entries.length - MOBILE_MAX;
-  const overflowDesktop = entries.length - DESKTOP_MAX;
-
+  // Modern mode: prioritize readability — show ALL events with full titles.
   return (
-    <div className="mt-auto flex flex-col gap-0.5">
-      {/* Mobile list */}
-      <div className="flex flex-col gap-0.5 sm:hidden">
-        {visibleMobile.map((e) => (
-          <EntryChip key={e.id} entry={e} />
-        ))}
-        {overflowMobile > 0 && (
-          <span className="px-1 text-[10px] font-semibold text-muted-foreground">
-            +{overflowMobile} til
-          </span>
-        )}
-      </div>
-      {/* Desktop list */}
-      <div className="hidden flex-col gap-0.5 sm:flex">
-        {visibleDesktop.map((e) => (
-          <EntryChip key={e.id} entry={e} />
-        ))}
-        {overflowDesktop > 0 && (
-          <span className="px-1 text-xs font-semibold text-muted-foreground">
-            +{overflowDesktop} til
-          </span>
-        )}
-      </div>
+    <div className="mt-1 flex flex-col gap-0.5">
+      {entries.map((e) => (
+        <EntryChip key={e.id} entry={e} />
+      ))}
     </div>
   );
 }
