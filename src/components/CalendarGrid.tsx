@@ -5,23 +5,23 @@ import {
   type CalendarEntry,
   toISODate,
   entryCoversDate,
-  entryMatchesFilter,
-  entryMatchesCabinLocation,
+  entryMatchesFilters,
+  entryMatchesCabinLocations,
   type FilterKey,
 } from "@/lib/entries";
-import { CATEGORY_META, isBirthdayEntry, type CabinLocation } from "@/lib/categories";
+import { getEntryVisual, isBirthdayEntry, type CabinLocation } from "@/lib/categories";
 
 const WEEKDAYS = ["Man", "Tir", "Ons", "Tor", "Fre", "Lør", "Søn"];
 
 type Props = {
   monthDate: Date;
   entries: CalendarEntry[];
-  filter: FilterKey;
-  cabinLocation: CabinLocation;
+  filters: Set<FilterKey>;
+  cabinLocations: Set<Exclude<CabinLocation, "all">>;
   onDayClick: (date: Date) => void;
 };
 
-export function CalendarGrid({ monthDate, entries, filter, cabinLocation, onDayClick }: Props) {
+export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDayClick }: Props) {
   const cells = useMemo(() => {
     const year = monthDate.getFullYear();
     const month = monthDate.getMonth();
@@ -38,7 +38,7 @@ export function CalendarGrid({ monthDate, entries, filter, cabinLocation, onDayC
 
   const todayISO = toISODate(new Date());
   const visible = entries.filter(
-    (e) => entryMatchesFilter(e, filter) && entryMatchesCabinLocation(e, cabinLocation),
+    (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
   );
 
   return (
@@ -58,7 +58,7 @@ export function CalendarGrid({ monthDate, entries, filter, cabinLocation, onDayC
           const iso = toISODate(date);
           const dayEntries = visible.filter((e) => entryCoversDate(e, iso));
           const primary = dayEntries[0];
-          const meta = primary ? CATEGORY_META[primary.category] : null;
+          const primaryVisual = primary ? getEntryVisual(primary) : null;
           const isToday = iso === todayISO;
 
           return (
@@ -70,7 +70,7 @@ export function CalendarGrid({ monthDate, entries, filter, cabinLocation, onDayC
                 "relative flex min-h-[88px] flex-col items-stretch rounded-2xl p-1.5 text-left transition-all sm:min-h-[120px] sm:p-2",
                 "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                 inMonth ? "cursor-pointer hover:scale-[1.02]" : "cursor-default opacity-30",
-                meta ? meta.soft : "bg-secondary/40 text-foreground hover:bg-secondary",
+                primaryVisual ? primaryVisual.soft : "bg-secondary/40 text-foreground hover:bg-secondary",
                 isToday && "ring-2 ring-foreground ring-offset-2 ring-offset-card",
               )}
             >
@@ -130,19 +130,20 @@ function DayEntries({ entries }: { entries: CalendarEntry[] }) {
 }
 
 function EntryChip({ entry }: { entry: CalendarEntry }) {
-  const m = CATEGORY_META[entry.category];
+  const v = getEntryVisual(entry);
   const isBday = isBirthdayEntry(entry);
-  // Stronger blocks for cabin, soft tint for highlight, medium for event, minimal for note.
   const style =
-    entry.category === "cabin"
-      ? m.color
-      : entry.category === "note"
-      ? "bg-card border border-border text-foreground"
-      : m.soft;
+    v.weight === "strong"
+      ? cn(v.color, "shadow-sm")
+      : v.weight === "warm"
+      ? cn(v.soft, "border-l-2 border-cat-highlight")
+      : v.weight === "medium"
+      ? v.soft
+      : "bg-card border border-border text-muted-foreground";
   return (
     <div
       className={cn(
-        "flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium sm:text-xs",
+        "flex items-center gap-1 truncate rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-all sm:text-xs",
         style,
       )}
       title={entry.title}
