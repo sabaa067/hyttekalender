@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { askAssistant } from "@/lib/assistant.functions";
 import { createEntry, parseISODate, type CalendarEntry } from "@/lib/entries";
-import { CATEGORY_META, type Category } from "@/lib/categories";
+import { CATEGORY_META, getEntryVisual, type Category } from "@/lib/categories";
 import { cn } from "@/lib/utils";
 
 type Draft = {
@@ -121,8 +121,8 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent }: Props) {
           {matched.length > 0 && (
             <div className="mt-3 flex flex-col gap-2">
               {matched.map((e) => {
-                const meta = CATEGORY_META[e.category];
-                const Icon = meta.icon;
+                const v = getEntryVisual(e);
+                const Icon = v.icon;
                 const start = parseISODate(e.start_date);
                 const end = parseISODate(e.end_date);
                 const sameDay = e.start_date === e.end_date;
@@ -136,13 +136,13 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent }: Props) {
                     }}
                     className="flex items-center gap-3 rounded-xl bg-card p-3 text-left transition-colors hover:bg-secondary"
                   >
-                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", meta.soft)}>
+                    <span className={cn("flex h-8 w-8 shrink-0 items-center justify-center rounded-lg", v.soft)}>
                       <Icon className="h-4 w-4" />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold text-foreground">{e.title}</span>
                       <span className="block text-xs text-muted-foreground">
-                        {meta.label} ·{" "}
+                        {v.label} ·{" "}
                         {sameDay
                           ? format(start, "d. MMM yyyy", { locale: nb })
                           : `${format(start, "d. MMM", { locale: nb })} – ${format(end, "d. MMM yyyy", { locale: nb })}`}
