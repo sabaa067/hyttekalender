@@ -31,6 +31,13 @@ type ViewMode = "modern" | "overview" | "excel";
 
 function Index() {
   const [view, setView] = useState<ViewMode>("modern");
+  const setViewMode = (next: ViewMode) => {
+    if (next === "modern") {
+      const n = new Date();
+      setMonthDate(new Date(n.getFullYear(), n.getMonth(), 1));
+    }
+    setView(next);
+  };
   const [filters, setFilters] = useState<Set<FilterKey>>(() => new Set());
   const [cabinLocations, setCabinLocations] = useState<Set<CabinLoc>>(() => new Set());
   // Høytider is OFF by default and is NOT toggled by "Alt".
@@ -151,19 +158,19 @@ function Index() {
         <div className="mx-auto flex rounded-full bg-card p-1 shadow-sm">
           <ToggleBtn
             active={view === "overview"}
-            onClick={() => setView("overview")}
+            onClick={() => setViewMode("overview")}
             icon={<LayoutGrid className="h-4 w-4" />}
             label="Oversikt"
           />
           <ToggleBtn
             active={view === "modern"}
-            onClick={() => setView("modern")}
+            onClick={() => setViewMode("modern")}
             icon={<CalendarDays className="h-4 w-4" />}
             label="Moderne"
           />
           <ToggleBtn
             active={view === "excel"}
-            onClick={() => setView("excel")}
+            onClick={() => setViewMode("excel")}
             icon={<Table2 className="h-4 w-4" />}
             label="Excel"
           />
