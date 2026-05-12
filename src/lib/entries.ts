@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { detectCabinLocation, type CabinLocation, type Category } from "./categories";
+import { detectCabinLocations, type CabinLocation, type Category } from "./categories";
 
 export type CalendarEntry = {
   id: string;
@@ -38,9 +38,9 @@ export function entryMatchesCabinLocations(
 ) {
   if (active.size === 0) return true;
   if (e.category !== "cabin") return true;
-  const detected = detectCabinLocation(`${e.title} ${e.description ?? ""}`);
-  if (!detected) return false;
-  return active.has(detected);
+  const detected = detectCabinLocations(`${e.title} ${e.description ?? ""}`);
+  for (const loc of detected) if (active.has(loc)) return true;
+  return false;
 }
 
 export async function fetchEntries(): Promise<CalendarEntry[]> {
