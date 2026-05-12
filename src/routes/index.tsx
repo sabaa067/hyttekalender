@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays, Table2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays, Table2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/CalendarGrid";
@@ -10,6 +10,7 @@ import { ExcelView } from "@/components/ExcelView";
 import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
 import { AssistantBar } from "@/components/AssistantBar";
+import { OverviewLegend } from "@/components/OverviewLegend";
 import {
   fetchEntries,
   FILTERS,
@@ -17,6 +18,7 @@ import {
   type CalendarEntry,
 } from "@/lib/entries";
 import { CABIN_LOCATION_META, CATEGORY_META, type CabinLocation } from "@/lib/categories";
+import { generateHolidaysForYears } from "@/lib/holidays";
 
 type CabinLoc = Exclude<CabinLocation, "all">;
 import { cn } from "@/lib/utils";
@@ -31,6 +33,8 @@ function Index() {
   const [view, setView] = useState<ViewMode>("modern");
   const [filters, setFilters] = useState<Set<FilterKey>>(() => new Set());
   const [cabinLocations, setCabinLocations] = useState<Set<CabinLoc>>(() => new Set());
+  // Høytider is OFF by default and is NOT toggled by "Alt".
+  const [showHolidays, setShowHolidays] = useState(false);
 
   const toggleFilter = (key: FilterKey) => {
     setFilters((prev) => {
@@ -71,6 +75,26 @@ function Index() {
     queryKey: ["entries"],
     queryFn: fetchEntries,
   });
+
+  const holidayEntries = useMemo(() => {
+    if (!showHolidays) return [] as CalendarEntry[];
+    const baseYear = view === "modern" ? monthDate.getFullYear() : year;
+    return generateHolidaysForYears([baseYear - 1, baseYear, baseYear + 1, baseYear + 2]);
+  }, [showHolidays, view, monthDate, year]);
+
+  const allEntries = useMemo(
+    () => (holidayEntries.length ? [...entries, ...holidayEntries] : entries),
+    [entries, holidayEntries],
+  );
+
+  // Holidays bypass category filters: ensure they always pass when showHolidays is on.
+  const effectiveFilters = useMemo<Set<FilterKey>>(() => {
+    if (!showHolidays) return filters;
+    const next = new Set<FilterKey>(filters);
+    // Treat "holiday" as a virtual filter key by injecting it; entries.ts ignores unknown keys.
+    (next as Set<string>).add("holiday");
+    return next as Set<FilterKey>;
+  }, [filters, showHolidays]);
 
   const monthLabel = monthDate.toLocaleDateString("no-NO", {
     month: "long",
@@ -177,6 +201,25 @@ function Index() {
                 </button>
               );
             })}
+            {(() => {
+              const meta = CATEGORY_META.holiday;
+              return (
+                <button
+                  type="button"
+                  onClick={() => setShowHolidays((v) => !v)}
+                  className={cn(
+                    "flex items-center gap-1.5 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-200 sm:text-base",
+                    showHolidays
+                      ? cn(meta.color, "border-transparent shadow-md scale-[1.03]")
+                      : cn(meta.soft, "border-current/20 opacity-80 hover:opacity-100 hover:scale-[1.02]"),
+                  )}
+                  title="Vis norske høytider og helligdager"
+                >
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Høytider
+                </button>
+              );
+            })()}
           </div>
           {filters.has("cabin") && (
             <div className="flex flex-wrap items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -234,8 +277,8 @@ function Index() {
         {view === "modern" && (
           <CalendarGrid
             monthDate={monthDate}
-            entries={entries}
-            filters={filters}
+            entries={allEntries}
+            filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => setDetailDate(d)}
           />
@@ -243,8 +286,8 @@ function Index() {
         {view === "overview" && (
           <YearOverview
             year={year}
-            entries={entries}
-            filters={filters}
+            entries={allEntries}
+            filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -255,8 +298,8 @@ function Index() {
         {view === "excel" && (
           <ExcelView
             year={year}
-            entries={entries}
-            filters={filters}
+            entries={allEntries}
+            filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
@@ -273,6 +316,8 @@ function Index() {
           </div>
         )}
       </div>
+
+      {view === "overview" && <OverviewLegend />}
 
       <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 p-4 backdrop-blur">
         <div className="mx-auto flex max-w-3xl">
