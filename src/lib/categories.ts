@@ -13,11 +13,12 @@ export const CATEGORY_META: Record<
     dot: "bg-cat-cabin",
     icon: Home,
   },
+  // Birthdays are kept as a sub-type of "highlight" — same colors, cake icon.
   birthday: {
-    label: "Bursdag",
-    color: "bg-cat-birthday text-white",
-    soft: "bg-cat-birthday-soft text-cat-birthday",
-    dot: "bg-cat-birthday",
+    label: "Høydepunkt",
+    color: "bg-cat-highlight text-white",
+    soft: "bg-cat-highlight-soft text-cat-highlight",
+    dot: "bg-cat-highlight",
     icon: Cake,
   },
   event: {
@@ -43,4 +44,44 @@ export const CATEGORY_META: Record<
   },
 };
 
-export const CATEGORIES: Category[] = ["cabin", "birthday", "event", "highlight", "note"];
+// Categories the user can pick from in the UI (no standalone "Bursdag").
+export const CATEGORIES: Category[] = ["cabin", "event", "highlight", "note"];
+
+// Detect a birthday from title even when category is "highlight".
+export function isBirthdayEntry(e: { title: string; category: Category }): boolean {
+  if (e.category === "birthday") return true;
+  return /bursdag|fødselsdag|år\b/i.test(e.title);
+}
+
+export type CabinLocation = "all" | "paradis" | "fjord" | "begge";
+
+export const CABIN_LOCATION_META: Record<
+  Exclude<CabinLocation, "all">,
+  { label: string; color: string; soft: string }
+> = {
+  paradis: {
+    label: "Paradis",
+    color: "bg-cabin-paradis text-white",
+    soft: "bg-cabin-paradis-soft text-cabin-paradis",
+  },
+  fjord: {
+    label: "Fjordgløtt",
+    color: "bg-cabin-fjord text-white",
+    soft: "bg-cabin-fjord-soft text-cabin-fjord",
+  },
+  begge: {
+    label: "Begge",
+    color: "bg-cabin-begge text-white",
+    soft: "bg-cabin-begge-soft text-cabin-begge",
+  },
+};
+
+export function detectCabinLocation(text: string): Exclude<CabinLocation, "all"> | null {
+  const t = text.toLowerCase();
+  const par = /paradis/.test(t);
+  const fjo = /fjordgl(ø|o)tt|fjordglott/.test(t);
+  if (par && fjo) return "begge";
+  if (par) return "paradis";
+  if (fjo) return "fjord";
+  return null;
+}
