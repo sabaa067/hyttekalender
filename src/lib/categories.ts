@@ -85,3 +85,31 @@ export function detectCabinLocation(text: string): Exclude<CabinLocation, "all">
   if (fjo) return "fjord";
   return null;
 }
+
+export type EntryVisual = {
+  color: string;
+  soft: string;
+  icon: LucideIcon;
+  label: string;
+  // Visual weight: cabin = strongest, highlight/birthday = warm soft, event = medium, note = minimal.
+  weight: "strong" | "warm" | "medium" | "minimal";
+};
+
+export function getEntryVisual(e: { title: string; category: Category; description?: string | null }): EntryVisual {
+  const meta = CATEGORY_META[e.category];
+  if (e.category === "cabin") {
+    const loc = detectCabinLocation(`${e.title} ${e.description ?? ""}`);
+    if (loc) {
+      const lm = CABIN_LOCATION_META[loc];
+      return { color: lm.color, soft: lm.soft, icon: meta.icon, label: `Hytte · ${lm.label}`, weight: "strong" };
+    }
+    return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "strong" };
+  }
+  if (e.category === "highlight" || e.category === "birthday") {
+    return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "warm" };
+  }
+  if (e.category === "event") {
+    return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "medium" };
+  }
+  return { color: meta.color, soft: meta.soft, icon: meta.icon, label: meta.label, weight: "minimal" };
+}
