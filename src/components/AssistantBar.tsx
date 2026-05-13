@@ -77,7 +77,17 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
             showHolidays: context.showHolidays,
           }
         : undefined;
-      const r = (await ask({ data: { query: vars.q, context: ctx } })) as Result;
+      // Bygg samtalehistorikk fra eldste til nyeste (siste 6 turer = 12 meldinger)
+      const turns = history
+        .filter((it) => it.id !== vars.itemId && it.result.reply)
+        .slice(0, 6)
+        .reverse();
+      const hist: { role: "user" | "assistant"; content: string }[] = [];
+      for (const t of turns) {
+        hist.push({ role: "user", content: t.query });
+        hist.push({ role: "assistant", content: t.result.reply });
+      }
+      const r = (await ask({ data: { query: vars.q, context: ctx, history: hist } })) as Result;
       return { ...vars, result: r };
     },
     onSuccess: ({ itemId, result }) => {
