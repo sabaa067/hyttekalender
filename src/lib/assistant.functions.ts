@@ -6,7 +6,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateHolidaysForYears } from "./holidays";
 
 export const askAssistant = createServerFn({ method: "POST" })
-  .inputValidator((data: { query: string; context?: unknown }) =>
+  .inputValidator((data: { query: string; context?: unknown; history?: unknown }) =>
     z
       .object({
         query: z.string().min(1).max(500),
@@ -20,6 +20,15 @@ export const askAssistant = createServerFn({ method: "POST" })
             activeCabinLocations: z.array(z.string()).optional(),
             showHolidays: z.boolean().optional(),
           })
+          .optional(),
+        history: z
+          .array(
+            z.object({
+              role: z.enum(["user", "assistant"]),
+              content: z.string().max(2000),
+            }),
+          )
+          .max(12)
           .optional(),
       })
       .parse(data),
@@ -93,6 +102,10 @@ export const askAssistant = createServerFn({ method: "POST" })
       "Du er en hjelpsom assistent for en norsk familiekalender.",
       `Dagens dato er ${today}. Året er ${new Date().getFullYear()}.`,
       "",
+      "DU FØRER EN PÅGÅENDE SAMTALE. Bruk SAMTALEHISTORIKK under for å løse referanser som 'de', 'den', 'dit', 'da', 'igjen', 'samme helg', 'uka etter', 'dagen etter', 'før det', 'etterpå', 'hva med august', 'hvor er det'. Tolk korte oppfølgingsspørsmål i lys av forrige spørsmål og svar – brukeren skal slippe å gjenta navn, datoer eller hyttesteder.",
+      "Hvis en referanse er tvetydig: gjett beste tolkning og bekreft kort i svaret ('Du mener Mortens familie, ikke sant? …'), eller foreslå 2-3 omformuleringer i 'suggestions'. Aldri svar 'jeg forstår ikke'.",
+      "Prioritering ved konflikt: nyeste samtaletur > synlig kontekst (måned/år/filter) > eldre samtaletur. Bruk alltid LIVE kalenderdata – aldri henvis til oppføringer som ikke finnes i KALENDERDATA lenger.",
+      "",
       "AKTIV KONTEKST I APPEN (bruk for å tolke 'denne uka', 'denne måneden', 'nå'):",
       `- Modus: ${ctx.view ?? "modern"} (Moderne=månedsvisning, Oversikt=årsvisning, Excel=tabell).`,
       `- Synlig måned: ${ctx.visibleMonth ?? "–"}. Synlig år: ${ctx.visibleYear ?? new Date().getFullYear()}.`,
@@ -127,10 +140,15 @@ export const askAssistant = createServerFn({ method: "POST" })
     ].join("\n");
 
     try {
+      const history = (data as { history?: { role: "user" | "assistant"; content: string }[] }).history ?? [];
+      const messages = [
+        ...history.map((m) => ({ role: m.role, content: m.content })),
+        { role: "user" as const, content: data.query },
+      ];
       const { experimental_output } = await generateText({
         model,
         system,
-        prompt: data.query,
+        messages,
         experimental_output: Output.object({ schema: ResultSchema }),
       });
       return experimental_output;
