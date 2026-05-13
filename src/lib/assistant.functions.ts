@@ -3,6 +3,7 @@ import { generateText, Output } from "ai";
 import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { generateHolidaysForYears } from "./holidays";
 
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((data: { query: string; context?: unknown }) =>
@@ -27,7 +28,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const fallback = {
       intent: "answer" as const,
       reply:
-        'Jeg forstod ikke helt spørsmålet. Prøv for eksempel: "Hva skjer 11 juni?" eller "Legg inn hyttetur 12–15 juli".',
+        "Jeg fant ingen treff akkurat nå. Prøv et av forslagene under – jeg søker direkte i kalenderen.",
       suggestions: [
         "Hva skjer 17. mai?",
         "Når er Mortens familie på Paradis?",
@@ -53,9 +54,23 @@ export const askAssistant = createServerFn({ method: "POST" })
       console.error("[assistant] db error:", e);
     }
 
+    // Inkluder norske høytider for de relevante årene slik at AI kan svare på "17 mai", "påske", "jul" osv.
+    const nowYear = new Date().getFullYear();
+    const ctxYear = (data.context as { visibleYear?: number } | undefined)?.visibleYear ?? nowYear;
+    const holidayYears = Array.from(new Set([nowYear - 1, nowYear, nowYear + 1, ctxYear]));
+    const holidays = generateHolidaysForYears(holidayYears).map((h) => ({
+      id: h.id,
+      title: h.title,
+      category: h.category,
+      start_date: h.start_date,
+      end_date: h.end_date,
+      description: h.description,
+    }));
+    const allEntries = [...entries, ...holidays];
+
     const today = new Date().toISOString().slice(0, 10);
     const gateway = createLovableAiGatewayProvider(apiKey);
-    const model = gateway("google/gemini-2.5-flash");
+    const model = gateway("google/gemini-2.5-pro");
 
     const ResultSchema = z.object({
       intent: z.enum(["create", "answer"]),
@@ -96,16 +111,19 @@ export const askAssistant = createServerFn({ method: "POST" })
       "Tolk navn og titler FUZZY — match selv ved skrivefeil (f.eks. 'morten' matcher 'Mortens familie', 'paradis' matcher 'Paradiset', 'fjordglot' matcher 'Fjordgløtt'). Bruk skjønn.",
       "Forstå norske månedsnavn og forkortelser (jan, feb, mar, apr, mai, jun, jul, aug, sep, okt, nov, des). Tolk datoer fritt: '12 til 15 juli' = 2026-07-12 til 2026-07-15. '21 jan til 23' = 2026-01-21 til 2026-01-23. '17 mai' = 2026-05-17.",
       "Hvis brukeren vil legge til noe: sett intent='create' og fyll ut draft (title, category, start_date, end_date YYYY-MM-DD). Lag en kort, ryddig tittel. La 'description' være tom om unødvendig.",
-      "Hvis brukeren spør om noe: sett intent='answer'. Svar kort (1-3 setninger), vennlig og presist basert på kalenderdataene. Søk fuzzy i title/description.",
+      "Hvis brukeren spør om noe: sett intent='answer'. Søk ALLTID gjennom HELE KALENDERDATA (titler OG beskrivelser) før du svarer. Bruk fuzzy/delmatch på navn (f.eks. 'vera' matcher alt som inneholder 'Vera', 'vra' osv.). List ALLE relevante treff – ikke bare ett.",
+      "GI ALDRI OPP. Hvis du ikke finner direkte treff: prøv synonymer, delstrenger, og beslektede begreper. Bare som SISTE utvei svar at det ikke finnes oppføringer – og foreslå da konkrete omformuleringer.",
+      "FORSTÅ IMPLISITTE SPØRSMÅL: 'Når har Vera fri?' = finn alle Vera-relaterte oppføringer OG identifiser åpne perioder mellom dem. 'Hvem er på Paradis i juni?' = list alle hytteoppføringer i juni som nevner Paradis. 'Når er det ledig på Fjordgløtt?' = vis perioder UTEN Fjordgløtt-bookinger.",
+      "Tolk relative tidsuttrykk ut fra dagens dato og synlig måned: 'denne uka', 'neste helg', 'i sommer' (jun-aug), 'i høst' (sep-nov), 'til jul', 'i fjor', 'i år'.",
       "Foretrekk strukturerte svar: punktlister når du lister flere oppføringer, korte avsnitt ellers. Aldri lange tekstvegger.",
       "Når svaret refererer til konkrete kalenderoppføringer: list opp deres 'id' (UUID fra dataene) i 'matched_ids'. Aldri finn på id-er — bruk bare id-er som finnes i KALENDERDATA.",
-      "Hvis du er usikker eller ingenting matcher: svar vennlig og foreslå 2-4 konkrete omformuleringer i 'suggestions' som komplette, klikkbare spørsmål (f.eks. 'Når er Mortens familie på Paradis?', 'Hva skjer 17. juni?'). Aldri si 'feil', 'kunne ikke tolke' eller vis tekniske feilmeldinger.",
+      "Hvis (og bare hvis) du virkelig ikke finner noe relevant etter grundig søk: gi et kort, vennlig svar basert på beste tolkning, og legg ved 2-4 konkrete omformuleringer i 'suggestions'. Aldri skriv 'jeg forstod ikke' eller 'jeg vet ikke' – gjør alltid et faktisk søk først.",
       "Eksempel: bruker skriver 'når skal morten på hyta' → reply: 'Mente du noe av dette?' og suggestions: ['Når skal Mortens familie på hytta?', 'Når er Mortens familie på Paradis?', 'Når er Mortens familie på Fjordgløtt?'].",
       "Eksempel: bruker skriver 'hva skjer 17 jn' → suggestions: ['Hva skjer 17. juni?', 'Hva skjer 17. januar?', 'Hva skjer 17. juli?'].",
       "Svar ALLTID på norsk. ALDRI på engelsk.",
       "",
-      "KALENDERDATA (JSON):",
-      JSON.stringify(entries ?? []),
+      `KALENDERDATA (JSON, ${allEntries.length} oppføringer – LIVE fra databasen + genererte høytider):`,
+      JSON.stringify(allEntries),
     ].join("\n");
 
     try {
