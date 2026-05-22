@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfDay, startOfMonth, addYears, addMonths, isSameMonth, isBefore } from "date-fns";
 import { nb } from "date-fns/locale";
 
 import {
@@ -74,6 +74,8 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   const isEdit = !!entry;
   const start = range?.from;
   const end = range?.to ?? range?.from;
+  const today = startOfDay(new Date());
+  const maxDate = addYears(today, 2);
 
   useEffect(() => {
     if (!open) return;
