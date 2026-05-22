@@ -1,82 +1,150 @@
-## Hyttekalender – Plan
+# Hyttekalender – Major Structure Update
 
-En enkel, delt månedskalender for 3 familiemedlemmer (Bestefar, Far, Onkel) som erstatter et Excel-ark. Ingen innlogging, ingen administrasjon – bare se kalenderen og legg til bookinger.
+Big architectural change with auth, roles, notifications, and history. Breaking into clear phases.
 
-### Sider (kun én)
+## 1. Rename to "Hyttekalender"
 
-`/` – Hovedside med:
-- Stor månedstittel + store «← forrige / neste →»-knapper
-- Stor månedskalender. Hver dag viser fargemarkering hvis booket. I dag er tydelig uthevet.
-- Fargekode-forklaring øverst (Bestefar = blå, Far = grønn, Onkel = oransje)
-- Stor «+ Ny booking»-knapp nederst (sticky på mobil)
-- Tom-tilstand når ingen bookinger finnes
+Replace every "Familiekalender" string across:
+- `src/routes/__root.tsx` (browser `<title>` / head meta)
+- `src/routes/index.tsx` (header, mobile)
+- `src/lib/assistant.functions.ts` (system prompt)
+- Login page, menu, notification copy
+- Any other occurrence (sweep via `rg`)
 
-### Booking-flyt
+## 2. Database (single migration)
 
-1. Trykk på en dato i kalenderen ELLER «+ Ny booking»
-2. Modal åpnes med:
-   - Hvem booker? – 3 store knapper med farge (Bestefar / Far / Onkel)
-   - Fra-dato og Til-dato (store datovelgere, forhåndsutfylt fra valgt dag)
-   - «Bekreft booking»-knapp
-3. Validering: overlappende datoer blokkeres med tydelig melding («Disse datoene er allerede booket av Far»)
-4. Bekreftelses-toast: «Booking lagret ✓»
+```sql
+-- Users (password-based, no signup; admin-seeded)
+create table public.app_users (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  password text not null unique,         -- plain for simplicity; family app, low threat
+  role text not null check (role in ('admin','viewer')),
+  created_at timestamptz default now()
+);
 
-Trykk på en eksisterende booking → liten popup med detaljer + «Slett booking»-knapp (bekreft først).
+-- Activity log (only calendar mutations)
+create table public.activity_log (
+  id uuid primary key default gen_random_uuid(),
+  actor_id uuid references app_users(id) on delete set null,
+  actor_name text not null,
+  action text not null check (action in ('create','update','delete')),
+  entry_title text not null,
+  entry_category text,
+  start_date date,
+  end_date date,
+  created_at timestamptz default now()
+);
 
-### Design
+-- Per-user read state for notifications
+create table public.activity_reads (
+  user_id uuid references app_users(id) on delete cascade,
+  last_read_at timestamptz not null default now(),
+  primary key (user_id)
+);
 
-- Skandinavisk minimalisme: mye luft, off-white bakgrunn, mørk grå tekst
-- Store fonter (basis 18px, kalenderdager ~20px)
-- Avrundede kort og knapper (radius ~16px)
-- Rolige farger: dempet blå, grønn, oransje på hvit bakgrunn med svake fargede prikker/bånd
-- Mobile-first, fungerer like godt på nettbrett
-- Subtile transitions (fade/scale) på modal og dato-hover
+alter table app_users enable row level security;
+alter table activity_log enable row level security;
+alter table activity_reads enable row level security;
 
-### Database (Lovable Cloud / Supabase)
+-- Open policies (app-level auth via password; no Supabase auth)
+create policy "read users" on app_users for select using (true);
+create policy "read log" on activity_log for select using (true);
+create policy "insert log" on activity_log for insert with check (true);
+create policy "read reads" on activity_reads for select using (true);
+create policy "upsert reads" on activity_reads for insert with check (true);
+create policy "update reads" on activity_reads for update using (true);
 
-Én tabell:
+alter publication supabase_realtime add table activity_log;
 
-```text
-bookings
-  id            uuid (pk)
-  person        text  -- 'grandfather' | 'father' | 'uncle'
-  start_date    date
-  end_date      date
-  created_at    timestamptz default now()
+-- Seed users
+insert into app_users (name, password, role) values
+  ('Farfar','farfarerbest','admin'),
+  ('Morten','kabelbakke','admin'),
+  ('Jørgen','stødig','admin'),
+  ('Sander','sanderseralt','viewer');
 ```
 
-- RLS: åpen lese-/skrive-tilgang (ingen auth, intern familiebruk)
-- Ingen seed-data – klar for senere Excel-import (samme kolonner)
-- Indeks på `start_date, end_date` for raskt overlapp-oppslag
+## 3. Auth (client-side session)
 
-### Komponenter
+`src/lib/auth.tsx`:
+- `AuthProvider` storing `{ id, name, role }` in `localStorage` under `hk_user`
+- `useAuth()` hook
+- `login(password)` → query `app_users` where `password = ?`, store user
+- `logout()` clears
 
-- `CalendarGrid` – månedsvisning, viser bookinger som fargede bånd
-- `MonthHeader` – tittel + navigasjon
-- `PersonLegend` – fargeforklaring
-- `BookingDialog` – opprett booking
-- `BookingDetailsDialog` – vis/slett booking
-- `personColors.ts` – sentral fargemapping (design tokens i `styles.css`)
+Mount provider in `__root.tsx`. Default route shows login if not authed.
 
-### Tech-stack
+## 4. Login page
 
-- TanStack Start + React + Tailwind v4
-- Lovable Cloud for database
-- `createServerFn` for `listBookings`, `createBooking` (med overlap-sjekk server-side), `deleteBooking`
-- React Query for caching og automatisk re-fetch
-- `date-fns` for datologikk
+New component (not a separate route – rendered inline by index when unauthed) or a `/login` route. Keep simple inline gate in `routes/index.tsx`.
 
-### Det jeg IKKE bygger
+Design: centered card, large title "Hyttekalender", single password input, "Logg inn" button, soft gradient background, no signup.
 
-- Ingen innlogging, brukerprofiler eller roller
-- Ingen admin/dashboard
-- Ingen e-post/varsler
-- Ingen ukesvisning, gjentakende bookinger eller redigering (kun opprett/slett)
-- Ingen hardkodede bookinger – tom database fra start
+## 5. Hamburger menu (top-left, fixed)
 
-### Åpne spørsmål
+`src/components/AppMenu.tsx` – Sheet from shadcn, fixed top-left button. Items:
+- Current user display
+- "Logg inn / Logg ut"
+- "Historikk" → opens history dialog/sheet
 
-Si fra hvis noe av dette skal endres, ellers går jeg videre med planen over:
-1. Skal man kunne **redigere** en booking, eller holder det med slett + opprett ny?
-2. Skal **fortid** være låst (kan ikke booke datoer som har vært)?
-3. Språk – jeg antar **norsk** i UI. OK?
+## 6. Notification bell (top-right, fixed)
+
+`src/components/NotificationBell.tsx`:
+- Subscribes to `activity_log` via supabase realtime + initial fetch
+- Badge = count of entries with `created_at > last_read_at` AND `actor_id != current user`
+- Click → Popover with latest 2 + "Se historikk" link
+- On open: update `activity_reads.last_read_at = now()`
+
+## 7. History panel
+
+Full list of activity_log entries formatted like:
+"Jørgen opprettet: Hyttetur på Paradis – 22–24 mai"
+
+## 8. Role enforcement (Sander = viewer)
+
+In `routes/index.tsx` and child components: pass `canEdit = role === 'admin'`. Hide "+ Nytt" buttons, disable edit/delete actions, hide AssistantBar publish/edit buttons (or keep ask but hide publish). Actually keep AssistantBar working but hide publish/edit if viewer.
+
+## 9. Activity logging hook
+
+Wrap `createEntry`, `updateEntry`, `deleteEntry` in `src/lib/entries.ts` so each calls a helper that inserts into `activity_log` with current user from a passed-in actor. Cleanest: keep entries.ts pure, and add wrappers in components or a `useEntryMutations` hook that logs after success.
+
+Action text:
+- create → "opprettet"
+- update → "redigerte"
+- delete → "slettet"
+
+Format: `${actor} ${verb}: ${title} – ${dateRange}`
+
+## 10. Realtime sync
+
+Add realtime to `calendar_entries` (already? check) and `activity_log`. Invalidate `["entries"]` query on changes so all logged-in users see updates instantly.
+
+## 11. AI context
+
+Pass current user name + role to assistant context so it can address user by name.
+
+---
+
+## File changes summary
+
+**New:**
+- `src/lib/auth.tsx` (provider/hook)
+- `src/lib/activity.ts` (log + read helpers, realtime hook)
+- `src/components/LoginGate.tsx`
+- `src/components/AppMenu.tsx`
+- `src/components/NotificationBell.tsx`
+- `src/components/HistoryPanel.tsx`
+- migration file
+
+**Edited:**
+- `src/routes/__root.tsx` (title, AuthProvider)
+- `src/routes/index.tsx` (gate, header with menu+bell, pass canEdit, log mutations)
+- `src/components/CalendarGrid.tsx`, `ExcelView.tsx`, `YearOverview.tsx`, `DayDetailPanel.tsx`, `EntryDialog.tsx`, `AssistantBar.tsx` (respect canEdit, log mutations via wrapper)
+- `src/lib/assistant.functions.ts` (Hyttekalender + user context)
+
+## Notes
+
+- Passwords stored plain since this is a small private family app and auth is purely a soft gate; happy to add hashing later if user wants.
+- Sander password set to `sanderseralt` (placeholder; user can change via prompt).
+- Realtime requires `calendar_entries` already in publication; will add in migration if missing.
