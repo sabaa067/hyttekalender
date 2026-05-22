@@ -22,6 +22,8 @@ import {
   parseISODate,
 } from "@/lib/entries";
 import { getEntryVisual } from "@/lib/categories";
+import { useAuth } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 type Props = {
   date: Date | null;
@@ -32,11 +34,21 @@ type Props = {
 };
 
 export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: Props) {
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin";
   const qc = useQueryClient();
   const del = useMutation({
-    mutationFn: (id: string) => deleteEntry(id),
+    mutationFn: async (e: CalendarEntry) => {
+      await deleteEntry(e.id);
+      await logActivity({
+        actor: user,
+        action: "delete",
+        entry: { title: e.title, category: e.category, start_date: e.start_date, end_date: e.end_date },
+      });
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["entries"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Slettet");
     },
     onError: (e: Error) => toast.error(e.message),
@@ -91,27 +103,29 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
                       <p className="mt-2 text-sm whitespace-pre-wrap">{e.description}</p>
                     )}
                   </div>
-                  <div className="flex flex-col gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-xl"
-                      onClick={() => onEdit(e)}
-                      aria-label="Rediger"
-                    >
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="rounded-xl"
-                      onClick={() => del.mutate(e.id)}
-                      disabled={del.isPending}
-                      aria-label="Slett"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  {canEdit && (
+                    <div className="flex flex-col gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={() => onEdit(e)}
+                        aria-label="Rediger"
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="rounded-xl"
+                        onClick={() => del.mutate(e)}
+                        disabled={del.isPending}
+                        aria-label="Slett"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -119,7 +133,7 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
         </div>
 
         <DialogFooter>
-          {!isPast && (
+          {!isPast && canEdit && (
             <Button size="lg" className="w-full rounded-2xl text-base" onClick={onAdd}>
               <Plus className="mr-1 h-4 w-4" />
               Ny oppføring

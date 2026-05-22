@@ -26,6 +26,8 @@ import {
   parseISODate,
   type CalendarEntry,
 } from "@/lib/entries";
+import { useAuth } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 type Props = {
   open: boolean;
@@ -36,6 +38,7 @@ type Props = {
 };
 
 export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: Props) {
+  const { user } = useAuth();
   const [category, setCategory] = useState<Category>("cabin");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -78,11 +81,25 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
         end_date: toISODate(end),
         description: description.trim() || null,
       };
-      if (entry) await updateEntry(entry.id, payload);
-      else await createEntry(payload);
+      if (entry) {
+        await updateEntry(entry.id, payload);
+        await logActivity({
+          actor: user,
+          action: "update",
+          entry: { title: payload.title, category, start_date: payload.start_date, end_date: payload.end_date },
+        });
+      } else {
+        await createEntry(payload);
+        await logActivity({
+          actor: user,
+          action: "create",
+          entry: { title: payload.title, category, start_date: payload.start_date, end_date: payload.end_date },
+        });
+      }
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["entries"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
       toast.success(isEdit ? "Lagret" : "Lagt til");
       onOpenChange(false);
     },

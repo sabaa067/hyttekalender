@@ -19,6 +19,8 @@ export const askAssistant = createServerFn({ method: "POST" })
             activeFilters: z.array(z.string()).optional(),
             activeCabinLocations: z.array(z.string()).optional(),
             showHolidays: z.boolean().optional(),
+            userName: z.string().optional(),
+            userRole: z.string().optional(),
           })
           .optional(),
         history: z
@@ -98,8 +100,13 @@ export const askAssistant = createServerFn({ method: "POST" })
     });
 
     const ctx = data.context ?? {};
+    const userLine = (ctx as { userName?: string; userRole?: string }).userName
+      ? `Pålogget bruker: ${(ctx as { userName?: string }).userName} (${(ctx as { userRole?: string }).userRole ?? "admin"}).`
+      : "Pålogget bruker: ukjent.";
     const system = [
-      "Du er en hjelpsom assistent for en norsk familiekalender.",
+      "Du er en hjelpsom assistent for Hyttekalender – en norsk familiekalender.",
+      userLine,
+      "Du kan tiltale brukeren ved navn når det er naturlig.",
       `Dagens dato er ${today}. Året er ${new Date().getFullYear()}.`,
       "",
       "DU FØRER EN PÅGÅENDE SAMTALE. Bruk SAMTALEHISTORIKK under for å løse referanser som 'de', 'den', 'dit', 'da', 'igjen', 'samme helg', 'uka etter', 'dagen etter', 'før det', 'etterpå', 'hva med august', 'hvor er det'. Tolk korte oppfølgingsspørsmål i lys av forrige spørsmål og svar – brukeren skal slippe å gjenta navn, datoer eller hyttesteder.",

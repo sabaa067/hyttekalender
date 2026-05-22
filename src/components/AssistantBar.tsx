@@ -12,6 +12,8 @@ import { askAssistant } from "@/lib/assistant.functions";
 import { createEntry, parseISODate, type CalendarEntry, type FilterKey, toISODate } from "@/lib/entries";
 import { CATEGORY_META, getEntryVisual, type Category } from "@/lib/categories";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth";
+import { logActivity } from "@/lib/activity";
 
 type Draft = {
   title: string;
@@ -59,6 +61,8 @@ type Props = {
 export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Props) {
   const ask = useServerFn(askAssistant);
   const qc = useQueryClient();
+  const { user } = useAuth();
+  const canEdit = user?.role === "admin";
   const [query, setQuery] = useState("");
   const [history, setHistory] = useState<HistoryItem[]>([]);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -75,6 +79,8 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
             activeFilters: Array.from(context.activeFilters),
             activeCabinLocations: Array.from(context.activeCabinLocations),
             showHolidays: context.showHolidays,
+            userName: user?.name,
+            userRole: user?.role,
           }
         : undefined;
       // Bygg samtalehistorikk fra eldste til nyeste (siste 6 turer = 12 meldinger)
@@ -109,9 +115,23 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
   });
 
   const publishMut = useMutation({
-    mutationFn: async (vars: { draft: Draft; itemId: string }) => createEntry(vars.draft),
+    mutationFn: async (vars: { draft: Draft; itemId: string }) => {
+      const created = await createEntry(vars.draft);
+      await logActivity({
+        actor: user,
+        action: "create",
+        entry: {
+          title: vars.draft.title,
+          category: vars.draft.category,
+          start_date: vars.draft.start_date,
+          end_date: vars.draft.end_date,
+        },
+      });
+      return created;
+    },
     onSuccess: (_d, vars) => {
       qc.invalidateQueries({ queryKey: ["entries"] });
+      qc.invalidateQueries({ queryKey: ["activity"] });
       toast.success("Lagt til");
       setHistory((h) => h.filter((it) => it.id !== vars.itemId));
     },
@@ -172,6 +192,7 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
           }}
           onOpenEvent={onOpenEvent}
           onClose={() => setHistory((h) => h.filter((it) => it.id !== newest.id))}
+          canEdit={canEdit}
         />
       )}
 
@@ -212,6 +233,7 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
                       }}
                       onOpenEvent={onOpenEvent}
                       embedded
+                      canEdit={canEdit}
                     />
                   </div>
                 )}
@@ -235,6 +257,7 @@ function ExpandedCard({
   onOpenEvent,
   onClose,
   embedded,
+  canEdit,
 }: {
   item: HistoryItem;
   entries: CalendarEntry[];
@@ -246,6 +269,7 @@ function ExpandedCard({
   onOpenEvent: (e: CalendarEntry) => void;
   onClose?: () => void;
   embedded?: boolean;
+  canEdit?: boolean;
 }) {
   const { result, query } = item;
   const draft = result.draft;
@@ -328,7 +352,7 @@ function ExpandedCard({
         </div>
       )}
 
-      {result.intent === "create" && draft && (
+      {result.intent === "create" && draft && canEdit && (
         <div className="mt-3 space-y-3">
           <DraftPreview draft={draft} />
           <div className="flex flex-wrap gap-2">
