@@ -239,20 +239,13 @@ export const askAssistant = createServerFn({ method: "POST" })
     }));
     // Berik hver oppføring med utledet metadata slik at modellen kan resonnere semantisk
     // (hyttested, normalisert søketekst) i stedet for ren tekst-matching.
-    type RawEntry = {
-      id: string;
-      title: string;
-      category: string;
-      start_date: string;
-      end_date: string;
-      description?: string | null;
-    };
-    const enrich = (e: RawEntry) => {
+    const enrich = (e: RawEntry): IndexedEntry => {
       const blob = `${e.title} ${e.description ?? ""}`.toLowerCase();
       const cabinSet = detectCabinLocations(blob);
       const cabins: string[] = [];
       if (cabinSet.has("paradis")) cabins.push("Paradis");
       if (cabinSet.has("fjord")) cabins.push("Fjordgløtt");
+      const search = blob.replace(/\s+/g, " ").trim();
       return {
         id: e.id,
         title: e.title,
@@ -261,7 +254,9 @@ export const askAssistant = createServerFn({ method: "POST" })
         end_date: e.end_date,
         description: e.description ?? null,
         cabins, // [] | ["Paradis"] | ["Fjordgløtt"] | ["Paradis","Fjordgløtt"]
-        search: blob.replace(/\s+/g, " ").trim(), // normalisert lowercase-tekst
+        search,
+        normalizedSearch: normalizeText(`${e.title} ${e.description ?? ""} ${e.category} ${cabins.join(" ")}`),
+        normalizedCabins: cabins.map(normalizeText),
       };
     };
     const allEntries = [
