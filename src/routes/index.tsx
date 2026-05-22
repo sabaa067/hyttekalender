@@ -53,7 +53,10 @@ function Index() {
     }
     setView(next);
   };
-  const [filters, setFilters] = useState<Set<FilterKey>>(() => new Set());
+  const ALL_MAIN_FILTERS: FilterKey[] = ["cabin", "event", "highlight", "note"];
+  const [filters, setFilters] = useState<Set<FilterKey>>(
+    () => new Set(ALL_MAIN_FILTERS),
+  );
   const [cabinLocations, setCabinLocations] = useState<Set<CabinLoc>>(() => new Set());
   // Høytider is OFF by default and is NOT toggled by "Alt".
   const [showHolidays, setShowHolidays] = useState(false);
@@ -78,9 +81,17 @@ function Index() {
     // Selecting a sub-location implies hytte filter is on.
     setFilters((prev) => (prev.has("cabin") ? prev : new Set(prev).add("cabin")));
   };
-  const clearAll = () => {
-    setFilters(new Set());
-    setCabinLocations(new Set());
+  const allActive =
+    ALL_MAIN_FILTERS.every((k) => filters.has(k)) && showHolidays;
+  const toggleAll = () => {
+    if (allActive) {
+      setFilters(new Set());
+      setCabinLocations(new Set());
+      setShowHolidays(false);
+    } else {
+      setFilters(new Set(ALL_MAIN_FILTERS));
+      setShowHolidays(true);
+    }
   };
   const [monthDate, setMonthDate] = useState(() => {
     const n = new Date();
@@ -115,7 +126,7 @@ function Index() {
   // so holiday entries also pass; when no filters are active everything shows
   // already so we leave the set empty.
   const effectiveFilters = useMemo<Set<FilterKey>>(() => {
-    if (!showHolidays || filters.size === 0) return filters;
+    if (!showHolidays) return filters;
     const next = new Set<string>(filters);
     next.add("holiday");
     return next as Set<FilterKey>;
@@ -215,10 +226,10 @@ function Index() {
           <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               type="button"
-              onClick={clearAll}
+              onClick={toggleAll}
               className={cn(
                 "rounded-full px-4 py-2 text-sm font-medium transition-all sm:text-base",
-                filters.size === 0 && cabinLocations.size === 0
+                allActive
                   ? "bg-foreground text-background shadow-md"
                   : "bg-card text-muted-foreground hover:bg-secondary",
               )}
