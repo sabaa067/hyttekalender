@@ -18,6 +18,7 @@ import { LoginGate } from "@/components/LoginGate";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { ProfileChip } from "@/components/ProfileChip";
 import { BiometricGate } from "@/components/BiometricGate";
+import { SplashScreen } from "@/components/SplashScreen";
 import { useAuth } from "@/lib/auth";
 import { usePersistedState } from "@/lib/persisted-state";
 import {
@@ -174,7 +175,7 @@ function Index() {
   const isEmpty = !isLoading && entries.length === 0;
 
   if (authLoading) {
-    return <div className="min-h-screen bg-secondary/40" />;
+    return <SplashScreen />;
   }
   if (!user) {
     return <LoginGate />;
