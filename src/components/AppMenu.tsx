@@ -67,8 +67,8 @@ export function AppMenu({ onOpenHistory }: Props) {
           <Menu className="h-5 w-5" />
         </button>
       </SheetTrigger>
-      <SheetContent side="left" className="w-80 sm:w-96">
-        <SheetHeader>
+      <SheetContent side="left" className="w-80 pt-[calc(env(safe-area-inset-top,0px)+2.25rem)] sm:w-96 sm:pt-6">
+        <SheetHeader className="pr-8">
           <SheetTitle className="text-2xl">Hyttekalender</SheetTitle>
         </SheetHeader>
 
