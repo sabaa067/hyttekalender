@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus, LayoutGrid, CalendarDays, Table2, Sparkles } from "lucide-react";
+import { Plus, LayoutGrid, CalendarDays, Table2, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/CalendarGrid";
@@ -9,7 +9,8 @@ import { YearOverview } from "@/components/YearOverview";
 import { ExcelView } from "@/components/ExcelView";
 import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
-import { AssistantBar } from "@/components/AssistantBar";
+import { AssistantButton } from "@/components/AssistantButton";
+import { CalendarNav } from "@/components/CalendarNav";
 import { OverviewLegend } from "@/components/OverviewLegend";
 import { AppMenu } from "@/components/AppMenu";
 import { NotificationBell } from "@/components/NotificationBell";
@@ -124,6 +125,7 @@ function Index() {
     month: "long",
     year: "numeric",
   });
+  void monthLabel;
 
   const goPrev = () => {
     if (view === "modern") {
@@ -163,6 +165,28 @@ function Index() {
     >
       <AppMenu onOpenHistory={() => setHistoryOpen(true)} />
       <NotificationBell onOpenHistory={() => setHistoryOpen(true)} />
+      <AssistantButton
+        entries={entries}
+        context={{
+          view,
+          visibleMonth: monthDate,
+          visibleYear: year,
+          activeFilters: filters,
+          activeCabinLocations: cabinLocations,
+          showHolidays,
+        }}
+        onEditDraft={(d) => {
+          setEditingEntry(null);
+          setInitialDate(null);
+          setDraftEntry(d);
+          setEntryOpen(true);
+        }}
+        onOpenEvent={(e) => {
+          const d = new Date(e.start_date + "T00:00:00");
+          setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
+          setDetailDate(d);
+        }}
+      />
 
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 pt-6 sm:gap-6 sm:pt-10">
         <header className="flex flex-col items-center gap-4 text-center">
@@ -171,29 +195,6 @@ function Index() {
             Hyttekalender
           </h1>
         </header>
-
-        <AssistantBar
-          entries={entries}
-          context={{
-            view,
-            visibleMonth: monthDate,
-            visibleYear: year,
-            activeFilters: filters,
-            activeCabinLocations: cabinLocations,
-            showHolidays,
-          }}
-          onEditDraft={(d) => {
-            setEditingEntry(null);
-            setInitialDate(null);
-            setDraftEntry(d);
-            setEntryOpen(true);
-          }}
-          onOpenEvent={(e) => {
-            const d = new Date(e.start_date + "T00:00:00");
-            setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
-            setDetailDate(d);
-          }}
-        />
 
         <div className="mx-auto flex rounded-full bg-card p-1 shadow-sm">
           <ToggleBtn
@@ -294,33 +295,16 @@ function Index() {
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 rounded-3xl bg-card p-2 shadow-sm sm:p-3">
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={goPrev}
-            aria-label="Forrige"
-            className="h-14 w-14 rounded-2xl"
-          >
-            <ChevronLeft className="!h-7 !w-7" />
-          </Button>
-          <button
-            type="button"
-            onClick={goToday}
-            className="flex-1 rounded-2xl py-3 text-center text-xl font-semibold capitalize text-foreground transition-colors hover:bg-secondary sm:text-2xl"
-          >
-            {view === "modern" ? monthLabel : year}
-          </button>
-          <Button
-            variant="ghost"
-            size="lg"
-            onClick={goNext}
-            aria-label="Neste"
-            className="h-14 w-14 rounded-2xl"
-          >
-            <ChevronRight className="!h-7 !w-7" />
-          </Button>
-        </div>
+        <CalendarNav
+          view={view}
+          monthDate={monthDate}
+          year={year}
+          onPrev={goPrev}
+          onNext={goNext}
+          onJumpMonth={(d) => setMonthDate(d)}
+          onJumpYear={(y) => setYear(y)}
+          onToday={goToday}
+        />
 
         {view === "modern" && (
           <CalendarGrid
@@ -355,6 +339,17 @@ function Index() {
             }}
           />
         )}
+
+        <CalendarNav
+          view={view}
+          monthDate={monthDate}
+          year={year}
+          onPrev={goPrev}
+          onNext={goNext}
+          onJumpMonth={(d) => setMonthDate(d)}
+          onJumpYear={(y) => setYear(y)}
+          onToday={goToday}
+        />
 
         {isEmpty && (
           <div className="rounded-3xl bg-card p-8 text-center shadow-sm">
