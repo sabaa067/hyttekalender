@@ -377,6 +377,13 @@ export const askAssistant = createServerFn({ method: "POST" })
         if (inferredNameWords.length) {
           const nameHits = inferredNameWords.filter((name) => fuzzyIncludes(entry.normalizedSearch, name)).length;
           if (!nameHits) return null;
+          if (wantsCabin) {
+            const onlyMarkedUnavailable = inferredNameWords.some((name) => {
+              const n = stemNorwegianName(name);
+              return entry.normalizedSearch.includes(`${n} jobber`) && !new RegExp(`\\b${n}\\s+(m|med|familie)\\b`).test(entry.normalizedSearch);
+            });
+            if (onlyMarkedUnavailable) return null;
+          }
           score += nameHits * 35;
         }
         if (wantsCabin) {
