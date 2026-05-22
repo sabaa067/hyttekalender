@@ -75,7 +75,7 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
             <p className="rounded-2xl bg-secondary/40 p-5 text-center text-base text-muted-foreground">
               {isPast
                 ? "Ser ikke ut som det er noe her ✨"
-                : "Ingen arrangementer denne dagen"}
+                : "Ingen oppføringer denne dagen"}
             </p>
           )}
 
