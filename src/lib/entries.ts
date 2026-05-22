@@ -1,7 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
 import { detectCabinLocations, primaryCabinLocation, type CabinLocation, type Category } from "./categories";
 import { getStoredToken } from "./auth";
-import { createEntryFn, updateEntryFn, deleteEntryFn } from "./entries.functions";
+import { createEntryFn, updateEntryFn, deleteEntryFn, listEntriesFn } from "./entries.functions";
 
 // Categories persisted in the DB (holiday is virtual, generated client-side).
 type DBCategory = Exclude<Category, "holiday">;
@@ -59,12 +58,10 @@ export function entryMatchesCabinLocations(
 }
 
 export async function fetchEntries(): Promise<CalendarEntry[]> {
-  const { data, error } = await supabase
-    .from("calendar_entries")
-    .select("*")
-    .order("start_date", { ascending: true });
-  if (error) throw error;
-  return (data ?? []) as CalendarEntry[];
+  const token = getStoredToken();
+  if (!token) throw new Error("Ikke innlogget");
+  const rows = (await listEntriesFn({ data: { token } })) as CalendarEntry[];
+  return rows ?? [];
 }
 
 export async function createEntry(input: {
