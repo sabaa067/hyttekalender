@@ -7,7 +7,6 @@ export function OverviewLegend() {
   const [open, setOpen] = useState(true);
 
   const items: { label: string; color: string }[] = [
-    { label: CATEGORY_META.cabin.label, color: CATEGORY_META.cabin.dot },
     { label: `Hytte · ${CABIN_LOCATION_META.paradis.label}`, color: "bg-cabin-paradis" },
     { label: `Hytte · ${CABIN_LOCATION_META.fjord.label}`, color: "bg-cabin-fjord" },
     { label: "Arrangement", color: CATEGORY_META.event.dot },

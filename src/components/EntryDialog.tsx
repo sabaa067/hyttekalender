@@ -18,7 +18,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-import { CATEGORIES, CATEGORY_META, type Category } from "@/lib/categories";
+import {
+  CATEGORIES,
+  CATEGORY_META,
+  CABIN_LOCATION_META,
+  primaryCabinLocation,
+  type Category,
+} from "@/lib/categories";
 import {
   createEntry,
   updateEntry,
@@ -43,6 +49,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
+  const [cabin, setCabin] = useState<"paradis" | "fjord" | null>(null);
   const qc = useQueryClient();
   const isEdit = !!entry;
   const start = range?.from;
@@ -55,6 +62,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       setTitle(entry.title);
       setDescription(entry.description ?? "");
       setRange({ from: parseISODate(entry.start_date), to: parseISODate(entry.end_date) });
+      setCabin(primaryCabinLocation(`${entry.title} ${entry.description ?? ""}`));
     } else if (draft) {
       setCategory((draft.category as Category) ?? "cabin");
       setTitle(draft.title ?? "");
@@ -62,24 +70,41 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       const from = draft.start_date ? parseISODate(draft.start_date) : (initialDate ?? new Date());
       const to = draft.end_date ? parseISODate(draft.end_date) : from;
       setRange({ from, to });
+      setCabin(
+        primaryCabinLocation(`${draft.title ?? ""} ${draft.description ?? ""}`),
+      );
     } else {
       setCategory("cabin");
       setTitle("");
       setDescription("");
       const d = initialDate ?? new Date();
       setRange({ from: d, to: d });
+      setCabin(null);
     }
   }, [open, initialDate, entry, draft]);
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!start || !end) throw new Error("Velg datoer");
+      if (category === "cabin" && !cabin)
+        throw new Error("Velg hytte (Paradis eller Fjordgløtt)");
+      const cabinLabel =
+        cabin === "paradis" ? "Paradis" : cabin === "fjord" ? "Fjordgløtt" : "";
+      let finalTitle = title.trim();
+      let finalDesc = description.trim();
+      if (category === "cabin" && cabinLabel) {
+        const haystack = `${finalTitle} ${finalDesc}`.toLowerCase();
+        const hasLoc = cabin === "paradis"
+          ? /paradis/.test(haystack)
+          : /fjordgl(ø|o)tt|fjordglott/i.test(haystack);
+        if (!hasLoc) finalTitle = `${cabinLabel} – ${finalTitle}`;
+      }
       const payload = {
-        title: title.trim(),
+        title: finalTitle,
         category,
         start_date: toISODate(start),
         end_date: toISODate(end),
-        description: description.trim() || null,
+        description: finalDesc || null,
       };
       if (entry) {
         await updateEntry(entry.id, payload);
@@ -107,7 +132,12 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   });
 
   const canSubmit =
-    title.trim().length > 0 && !!start && !!end && end >= start && !mutation.isPending;
+    title.trim().length > 0 &&
+    !!start &&
+    !!end &&
+    end >= start &&
+    !mutation.isPending &&
+    (category !== "cabin" || !!cabin);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,6 +178,35 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
               })}
             </div>
           </div>
+
+          {category === "cabin" && (
+            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
+              <p className="mb-3 text-base font-medium text-foreground">
+                Hytte <span className="text-destructive">*</span>
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {(["paradis", "fjord"] as const).map((loc) => {
+                  const m = CABIN_LOCATION_META[loc];
+                  const active = cabin === loc;
+                  return (
+                    <button
+                      key={loc}
+                      type="button"
+                      onClick={() => setCabin(loc)}
+                      className={cn(
+                        "rounded-2xl p-3 text-base font-medium transition-all",
+                        active
+                          ? cn(m.color, "shadow-md scale-[1.02]")
+                          : cn(m.soft, "opacity-70 hover:opacity-100"),
+                      )}
+                    >
+                      {m.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           <div>
             <p className="mb-2 text-base font-medium text-foreground">Tittel</p>

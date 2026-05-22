@@ -30,7 +30,8 @@ function entryMatchesSingleFilter(e: CalendarEntry, f: FilterKey) {
 }
 
 export function entryMatchesFilters(e: CalendarEntry, active: Set<FilterKey>) {
-  if (active.size === 0) return true;
+  if (active.size === 0) return false;
+  if (e.category === "holiday") return (active as Set<string>).has("holiday");
   for (const f of active) if (entryMatchesSingleFilter(e, f)) return true;
   return false;
 }
