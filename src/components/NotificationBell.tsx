@@ -45,29 +45,15 @@ export function NotificationBell({ onOpenHistory }: Props) {
     };
   }, [user]);
 
-  // Realtime: refresh activity + entries when anything changes
+  // Poll for fresh activity + entries periodically (realtime broadcasts were
+  // disabled to avoid leaking row changes to anonymous subscribers).
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel("realtime-activity")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "activity_log" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["activity"] });
-        },
-      )
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "calendar_entries" },
-        () => {
-          qc.invalidateQueries({ queryKey: ["entries"] });
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const interval = window.setInterval(() => {
+      qc.invalidateQueries({ queryKey: ["activity"] });
+      qc.invalidateQueries({ queryKey: ["entries"] });
+    }, 30_000);
+    return () => window.clearInterval(interval);
   }, [user, qc]);
 
   const unreadCount = useMemo(() => {
