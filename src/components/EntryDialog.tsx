@@ -304,3 +304,63 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
     </Dialog>
   );
 }
+
+function InlineMonthPicker({
+  value,
+  today,
+  maxDate,
+  onSelect,
+}: {
+  value: Date;
+  today: Date;
+  maxDate: Date;
+  onSelect: (d: Date) => void;
+}) {
+  const months: Date[] = [];
+  let cursor = startOfMonth(today);
+  const end = startOfMonth(maxDate);
+  while (!isBefore(end, cursor)) {
+    months.push(cursor);
+    cursor = addMonths(cursor, 1);
+  }
+  const byYear = new Map<number, Date[]>();
+  for (const m of months) {
+    const y = m.getFullYear();
+    if (!byYear.has(y)) byYear.set(y, []);
+    byYear.get(y)!.push(m);
+  }
+  return (
+    <div className="max-h-[20rem] space-y-3 overflow-y-auto p-3 animate-in fade-in-50">
+      {Array.from(byYear.entries()).map(([year, ms]) => (
+        <div key={year}>
+          <p className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {year}
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {ms.map((m) => {
+              const active = isSameMonth(m, value);
+              const isCurrent = isSameMonth(m, today);
+              return (
+                <button
+                  key={m.toISOString()}
+                  type="button"
+                  onClick={() => onSelect(m)}
+                  className={cn(
+                    "rounded-xl px-2 py-2.5 text-sm font-medium capitalize transition-all",
+                    active
+                      ? "bg-foreground text-background shadow-sm"
+                      : isCurrent
+                      ? "bg-secondary text-foreground ring-1 ring-foreground/20"
+                      : "bg-background text-foreground hover:bg-secondary",
+                  )}
+                >
+                  {format(m, "LLL", { locale: nb })}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
