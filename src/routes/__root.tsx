@@ -75,12 +75,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Hyttekalender" },
-      { name: "description", content: "Enkel delt kalender for hyttebooking" },
+      { name: "description", content: "Familie hytte kalender" },
       { property: "og:title", content: "Hyttekalender" },
-      { property: "og:description", content: "Enkel delt kalender for hyttebooking" },
+      { property: "og:description", content: "Familie hytte kalender" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Hyttekalender" },
+      { name: "twitter:description", content: "Familie hytte kalender" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5315f7fe-a011-4c0b-9e25-26e0d54680e8/id-preview-702bfa7e--1b8f35e3-3bb6-43ba-bddf-4d27a292f638.lovable.app-1778685037006.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/5315f7fe-a011-4c0b-9e25-26e0d54680e8/id-preview-702bfa7e--1b8f35e3-3bb6-43ba-bddf-4d27a292f638.lovable.app-1778685037006.png" },
     ],
     links: [
       {
