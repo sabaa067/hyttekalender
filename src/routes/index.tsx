@@ -53,11 +53,11 @@ function Index() {
     }
     setView(next);
   };
-  const ALL_MAIN_FILTERS: FilterKey[] = ["cabin", "event", "highlight", "note"];
+  const ALL_MAIN_FILTERS: FilterKey[] = ["paradis", "fjord", "event", "highlight", "note"];
   const [filters, setFilters] = useState<Set<FilterKey>>(
     () => new Set(ALL_MAIN_FILTERS),
   );
-  const [cabinLocations, setCabinLocations] = useState<Set<CabinLoc>>(() => new Set());
+  const [cabinLocations] = useState<Set<CabinLoc>>(() => new Set());
   // Høytider is OFF by default and is NOT toggled by "Alt".
   const [showHolidays, setShowHolidays] = useState(false);
 
@@ -66,27 +66,14 @@ function Index() {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
       else next.add(key);
-      // If hytte is removed, clear cabin sub-locations.
-      if (!next.has("cabin")) setCabinLocations(new Set());
       return next;
     });
-  };
-  const toggleCabinLoc = (key: CabinLoc) => {
-    setCabinLocations((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-    // Selecting a sub-location implies hytte filter is on.
-    setFilters((prev) => (prev.has("cabin") ? prev : new Set(prev).add("cabin")));
   };
   const allActive =
     ALL_MAIN_FILTERS.every((k) => filters.has(k)) && showHolidays;
   const toggleAll = () => {
     if (allActive) {
       setFilters(new Set());
-      setCabinLocations(new Set());
       setShowHolidays(false);
     } else {
       setFilters(new Set(ALL_MAIN_FILTERS));
