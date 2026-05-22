@@ -17,9 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MonthJumper } from "@/components/MonthJumper";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 
 import {
   CATEGORY_META,
@@ -71,7 +69,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   const [description, setDescription] = useState("");
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
   const [calMonth, setCalMonth] = useState<Date>(() => new Date());
-  const [jumpOpen, setJumpOpen] = useState(false);
+  const [monthPicker, setMonthPicker] = useState(false);
   const qc = useQueryClient();
   const isEdit = !!entry;
   const start = range?.from;
