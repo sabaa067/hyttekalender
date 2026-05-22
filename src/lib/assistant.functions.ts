@@ -64,6 +64,19 @@ const MONTH_LABELS = [
 ];
 
 const QUERY_NON_ENTITY_WORDS = new Set([
+  "nar",
+  "hva",
+  "hvem",
+  "hvor",
+  "hvordan",
+  "pa",
+  "til",
+  "fra",
+  "skal",
+  "kommer",
+  "reiser",
+  "drar",
+  "neste",
   "vis",
   "finn",
   "fortell",
@@ -331,6 +344,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const STOPWORDS = new Set([
       "og","på","i","til","fra","med","hos","for","de","den","det","en","et","av","om","som","er","var","skal","har","ikke","ved","etter","før","som","seg","sin","sitt","sine","vår","våre","oss","alle","noen","når","hva","hvor","hvem","hvilken","hvilke","hvordan","hytte","hytta","tur","helg","uke","ferie","dag","kveld","kveld","morgen","natt","kalender","arrangement","møte","fest","sommer","vinter","høst","vår","påske","jul","nyttår","st","kl","ca","ny","gammel","stor","liten","fri","ledig","opptatt","fullt","stengt","åpent","kommer","drar","reiser","ankommer","ankomst","avreise","besøk","besøker","barn","barna","familie","familien","mamma","pappa","mor","far","onkel","tante","bestemor","bestefar","farfar","farmor","morfar","mormor","oss","dem","seg",
     ]);
+    const normalizedStopwords = new Set([...STOPWORDS].map(normalizeText));
     for (const e of allEntries) {
       const text = `${e.title} ${e.description ?? ""}`;
       const tokens = text
@@ -355,7 +369,7 @@ export const askAssistant = createServerFn({ method: "POST" })
       .map(([n]) => n);
 
     const qNorm = normalizeText(data.query);
-    const queryWords = qNorm.split(/\s+/).filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+    const queryWords = qNorm.split(/\s+/).filter((w) => w.length >= 3 && !normalizedStopwords.has(w));
     const wantsCabin = /\b(hytte|hytta|hytten|hyttetur|hytteturer|paradis|fjordglott|fjord)\b/.test(qNorm);
     const wantsAvailability = /\b(fri|ledig|ledige|aapen|apen|available)\b/.test(qNorm);
     const wantsFuture = /\b(nar|skal|kommer|reiser|drar|neste|fremover|framtid|future)\b/.test(qNorm);
