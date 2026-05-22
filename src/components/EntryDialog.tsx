@@ -19,12 +19,30 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
 import {
-  CATEGORIES,
   CATEGORY_META,
   CABIN_LOCATION_META,
   primaryCabinLocation,
   type Category,
 } from "@/lib/categories";
+
+type UiCategory = "paradis" | "fjord" | "event" | "highlight" | "note";
+const UI_CATEGORIES: { key: UiCategory; label: string; color: string; soft: string; icon: typeof CATEGORY_META.event.icon }[] = [
+  { key: "paradis", label: "Paradis", color: CABIN_LOCATION_META.paradis.color, soft: CABIN_LOCATION_META.paradis.soft, icon: CATEGORY_META.cabin.icon },
+  { key: "fjord", label: "Fjordgløtt", color: CABIN_LOCATION_META.fjord.color, soft: CABIN_LOCATION_META.fjord.soft, icon: CATEGORY_META.cabin.icon },
+  { key: "event", label: CATEGORY_META.event.label, color: CATEGORY_META.event.color, soft: CATEGORY_META.event.soft, icon: CATEGORY_META.event.icon },
+  { key: "highlight", label: CATEGORY_META.highlight.label, color: CATEGORY_META.highlight.color, soft: CATEGORY_META.highlight.soft, icon: CATEGORY_META.highlight.icon },
+  { key: "note", label: CATEGORY_META.note.label, color: CATEGORY_META.note.color, soft: CATEGORY_META.note.soft, icon: CATEGORY_META.note.icon },
+];
+
+function entryToUiCategory(entry: { category: Category; title: string; description?: string | null }): UiCategory {
+  if (entry.category === "cabin") {
+    const loc = primaryCabinLocation(`${entry.title} ${entry.description ?? ""}`);
+    return loc === "fjord" ? "fjord" : "paradis";
+  }
+  if (entry.category === "birthday") return "highlight";
+  if (entry.category === "highlight" || entry.category === "event" || entry.category === "note") return entry.category;
+  return "event";
+}
 import {
   createEntry,
   updateEntry,
@@ -45,11 +63,10 @@ type Props = {
 
 export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: Props) {
   const { user } = useAuth();
-  const [category, setCategory] = useState<Category>("cabin");
+  const [uiCategory, setUiCategory] = useState<UiCategory>("paradis");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
-  const [cabin, setCabin] = useState<"paradis" | "fjord" | null>(null);
   const qc = useQueryClient();
   const isEdit = !!entry;
   const start = range?.from;
@@ -58,43 +75,44 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   useEffect(() => {
     if (!open) return;
     if (entry) {
-      setCategory(entry.category);
+      setUiCategory(entryToUiCategory(entry));
       setTitle(entry.title);
       setDescription(entry.description ?? "");
       setRange({ from: parseISODate(entry.start_date), to: parseISODate(entry.end_date) });
-      setCabin(primaryCabinLocation(`${entry.title} ${entry.description ?? ""}`));
     } else if (draft) {
-      setCategory((draft.category as Category) ?? "cabin");
+      setUiCategory(
+        entryToUiCategory({
+          category: (draft.category as Category) ?? "cabin",
+          title: draft.title ?? "",
+          description: draft.description ?? "",
+        }),
+      );
       setTitle(draft.title ?? "");
       setDescription(draft.description ?? "");
       const from = draft.start_date ? parseISODate(draft.start_date) : (initialDate ?? new Date());
       const to = draft.end_date ? parseISODate(draft.end_date) : from;
       setRange({ from, to });
-      setCabin(
-        primaryCabinLocation(`${draft.title ?? ""} ${draft.description ?? ""}`),
-      );
     } else {
-      setCategory("cabin");
+      setUiCategory("paradis");
       setTitle("");
       setDescription("");
       const d = initialDate ?? new Date();
       setRange({ from: d, to: d });
-      setCabin(null);
     }
   }, [open, initialDate, entry, draft]);
 
   const mutation = useMutation({
     mutationFn: async () => {
       if (!start || !end) throw new Error("Velg datoer");
-      if (category === "cabin" && !cabin)
-        throw new Error("Velg hytte (Paradis eller Fjordgløtt)");
+      const isCabin = uiCategory === "paradis" || uiCategory === "fjord";
       const cabinLabel =
-        cabin === "paradis" ? "Paradis" : cabin === "fjord" ? "Fjordgløtt" : "";
+        uiCategory === "paradis" ? "Paradis" : uiCategory === "fjord" ? "Fjordgløtt" : "";
+      const category: Category = isCabin ? "cabin" : (uiCategory as Category);
       let finalTitle = title.trim();
       let finalDesc = description.trim();
-      if (category === "cabin" && cabinLabel) {
+      if (isCabin) {
         const haystack = `${finalTitle} ${finalDesc}`.toLowerCase();
-        const hasLoc = cabin === "paradis"
+        const hasLoc = uiCategory === "paradis"
           ? /paradis/.test(haystack)
           : /fjordgl(ø|o)tt|fjordglott/i.test(haystack);
         if (!hasLoc) finalTitle = `${cabinLabel} – ${finalTitle}`;
@@ -136,8 +154,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
     !!start &&
     !!end &&
     end >= start &&
-    !mutation.isPending &&
-    (category !== "cabin" || !!cabin);
+    !mutation.isPending;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -155,58 +172,26 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
           <div>
             <p className="mb-3 text-base font-medium text-foreground">Kategori</p>
             <div className="grid grid-cols-2 gap-2">
-              {CATEGORIES.map((c) => {
-                const m = CATEGORY_META[c];
-                const Icon = m.icon;
+              {UI_CATEGORIES.map((c) => {
+                const Icon = c.icon;
+                const active = uiCategory === c.key;
                 return (
                   <button
-                    key={c}
+                    key={c.key}
                     type="button"
-                    onClick={() => setCategory(c)}
+                    onClick={() => setUiCategory(c.key)}
                     className={cn(
                       "flex items-center gap-2 rounded-2xl p-3 text-base font-medium transition-all",
-                      m.soft,
-                      category === c
-                        ? "ring-2 ring-foreground ring-offset-2 ring-offset-card"
-                        : "opacity-70 hover:opacity-100",
+                      active ? cn(c.color, "shadow-md scale-[1.02]") : cn(c.soft, "opacity-70 hover:opacity-100"),
                     )}
                   >
                     <Icon className="h-5 w-5" />
-                    {m.label}
+                    {c.label}
                   </button>
                 );
               })}
             </div>
           </div>
-
-          {category === "cabin" && (
-            <div className="animate-in fade-in slide-in-from-top-1 duration-200">
-              <p className="mb-3 text-base font-medium text-foreground">
-                Hytte <span className="text-destructive">*</span>
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                {(["paradis", "fjord"] as const).map((loc) => {
-                  const m = CABIN_LOCATION_META[loc];
-                  const active = cabin === loc;
-                  return (
-                    <button
-                      key={loc}
-                      type="button"
-                      onClick={() => setCabin(loc)}
-                      className={cn(
-                        "rounded-2xl p-3 text-base font-medium transition-all",
-                        active
-                          ? cn(m.color, "shadow-md scale-[1.02]")
-                          : cn(m.soft, "opacity-70 hover:opacity-100"),
-                      )}
-                    >
-                      {m.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
 
           <div>
             <p className="mb-2 text-base font-medium text-foreground">Tittel</p>

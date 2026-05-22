@@ -52,6 +52,9 @@ export const CATEGORY_META: Record<
 };
 
 // Categories the user can pick from in the UI (no standalone "Bursdag").
+// Note: "cabin" is no longer offered directly — users pick Paradis or Fjordgløtt
+// in the entry dialog, which are saved as category="cabin" with the location
+// embedded in the title.
 export const CATEGORIES: Category[] = ["cabin", "event", "highlight", "note"];
 
 // Detect a birthday from title even when category is "highlight".
