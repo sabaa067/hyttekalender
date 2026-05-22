@@ -17,6 +17,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { MonthJumper } from "@/components/MonthJumper";
+import { ChevronDown } from "lucide-react";
 
 import {
   CATEGORY_META,
@@ -67,6 +70,8 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
+  const [calMonth, setCalMonth] = useState<Date>(() => new Date());
+  const [jumpOpen, setJumpOpen] = useState(false);
   const qc = useQueryClient();
   const isEdit = !!entry;
   const start = range?.from;
@@ -78,7 +83,9 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       setUiCategory(entryToUiCategory(entry));
       setTitle(entry.title);
       setDescription(entry.description ?? "");
-      setRange({ from: parseISODate(entry.start_date), to: parseISODate(entry.end_date) });
+      const from = parseISODate(entry.start_date);
+      setRange({ from, to: parseISODate(entry.end_date) });
+      setCalMonth(from);
     } else if (draft) {
       setUiCategory(
         entryToUiCategory({
@@ -92,12 +99,14 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       const from = draft.start_date ? parseISODate(draft.start_date) : (initialDate ?? new Date());
       const to = draft.end_date ? parseISODate(draft.end_date) : from;
       setRange({ from, to });
+      setCalMonth(from);
     } else {
       setUiCategory("paradis");
       setTitle("");
       setDescription("");
       const d = initialDate ?? new Date();
       setRange({ from: d, to: d });
+      setCalMonth(d);
     }
   }, [open, initialDate, entry, draft]);
 
@@ -217,11 +226,50 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-2">
+              <div className="flex justify-center px-2 pt-1">
+                <Popover open={jumpOpen} onOpenChange={setJumpOpen}>
+                  <PopoverTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold capitalize text-foreground transition-colors hover:bg-secondary"
+                    >
+                      {format(calMonth, "LLLL yyyy", { locale: nb })}
+                      <ChevronDown className="h-4 w-4 opacity-60" />
+                    </button>
+                  </PopoverTrigger>
+                  <PopoverContent
+                    align="center"
+                    className="w-[min(92vw,22rem)] rounded-2xl border-border/60 bg-card/95 p-3 shadow-xl backdrop-blur"
+                  >
+                    <div className="mb-2 flex items-center justify-between px-1">
+                      <p className="text-sm font-semibold text-foreground">Hopp til måned</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setCalMonth(new Date());
+                          setJumpOpen(false);
+                        }}
+                        className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary/70"
+                      >
+                        I dag
+                      </button>
+                    </div>
+                    <MonthJumper
+                      monthDate={calMonth}
+                      onSelect={(d) => {
+                        setCalMonth(d);
+                        setJumpOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
               <Calendar
                 mode="range"
                 selected={range as any}
                 onSelect={(r: any) => setRange(r ?? undefined)}
-                defaultMonth={start ?? new Date()}
+                month={calMonth}
+                onMonthChange={setCalMonth}
                 numberOfMonths={1}
                 locale={nb}
                 className={cn("p-2 pointer-events-auto mx-auto")}
