@@ -81,6 +81,35 @@ export type Database = {
           },
         ]
       }
+      app_sessions: {
+        Row: {
+          created_at: string
+          expires_at: string
+          token: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          token: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_sessions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "app_users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_users: {
         Row: {
           created_at: string
@@ -102,30 +131,6 @@ export type Database = {
           name?: string
           password?: string
           role?: string
-        }
-        Relationships: []
-      }
-      bookings: {
-        Row: {
-          created_at: string
-          end_date: string
-          id: string
-          person: Database["public"]["Enums"]["booking_person"]
-          start_date: string
-        }
-        Insert: {
-          created_at?: string
-          end_date: string
-          id?: string
-          person: Database["public"]["Enums"]["booking_person"]
-          start_date: string
-        }
-        Update: {
-          created_at?: string
-          end_date?: string
-          id?: string
-          person?: Database["public"]["Enums"]["booking_person"]
-          start_date?: string
         }
         Relationships: []
       }
@@ -159,39 +164,6 @@ export type Database = {
           start_date?: string
           title?: string
           updated_at?: string
-        }
-        Relationships: []
-      }
-      events: {
-        Row: {
-          created_at: string
-          end_date: string
-          id: string
-          person: string | null
-          recurring_yearly: boolean
-          start_date: string
-          title: string
-          type: Database["public"]["Enums"]["event_type"]
-        }
-        Insert: {
-          created_at?: string
-          end_date: string
-          id?: string
-          person?: string | null
-          recurring_yearly?: boolean
-          start_date: string
-          title: string
-          type: Database["public"]["Enums"]["event_type"]
-        }
-        Update: {
-          created_at?: string
-          end_date?: string
-          id?: string
-          person?: string | null
-          recurring_yearly?: boolean
-          start_date?: string
-          title?: string
-          type?: Database["public"]["Enums"]["event_type"]
         }
         Relationships: []
       }
