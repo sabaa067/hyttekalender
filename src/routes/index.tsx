@@ -329,18 +329,7 @@ function Index() {
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
-              const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-              const hasEntries = entries.some(
-                (e) => iso >= e.start_date && iso <= e.end_date,
-              );
-              if (canEdit && !hasEntries) {
-                setEditingEntry(null);
-                setDraftEntry(null);
-                setInitialDate(d);
-                setEntryOpen(true);
-              } else {
-                setDetailDate(d);
-              }
+              setDetailDate(d);
             }}
           />
         )}
@@ -352,25 +341,8 @@ function Index() {
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
               setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
-              if (canEdit) {
-                setEditingEntry(null);
-                setDraftEntry(null);
-                setInitialDate(d);
-                setEntryOpen(true);
-              } else {
-                setDetailDate(d);
-              }
+              setDetailDate(d);
             }}
-            onEntryClick={
-              canEdit
-                ? (e) => {
-                    setEditingEntry(e);
-                    setInitialDate(null);
-                    setDraftEntry(null);
-                    setEntryOpen(true);
-                  }
-                : undefined
-            }
           />
         )}
 

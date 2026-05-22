@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format, startOfDay, startOfMonth, addYears, addMonths, isSameMonth, isBefore } from "date-fns";
+import { format, startOfDay, startOfMonth, addYears, addMonths, isSameMonth, isBefore, max as dateMax } from "date-fns";
 import { nb } from "date-fns/locale";
 
 import {
@@ -67,13 +67,11 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   const [uiCategory, setUiCategory] = useState<UiCategory>("paradis");
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [calMonth, setCalMonth] = useState<Date>(() => new Date());
   const [monthPicker, setMonthPicker] = useState(false);
   const qc = useQueryClient();
   const isEdit = !!entry;
-  const start = range?.from;
-  const end = range?.to ?? range?.from;
   const today = startOfDay(new Date());
   const maxDate = addYears(today, 2);
 
@@ -84,7 +82,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       setTitle(entry.title);
       setDescription(entry.description ?? "");
       const from = parseISODate(entry.start_date);
-      setRange({ from, to: parseISODate(entry.end_date) });
+      setSelectedDate(from);
       setCalMonth(from);
     } else if (draft) {
       setUiCategory(
@@ -96,23 +94,24 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       );
       setTitle(draft.title ?? "");
       setDescription(draft.description ?? "");
-      const from = draft.start_date ? parseISODate(draft.start_date) : (initialDate ?? new Date());
-      const to = draft.end_date ? parseISODate(draft.end_date) : from;
-      setRange({ from, to });
+      const raw = draft.start_date ? parseISODate(draft.start_date) : (initialDate ?? new Date());
+      const from = dateMax([raw, today]);
+      setSelectedDate(from);
       setCalMonth(from);
     } else {
       setUiCategory("paradis");
       setTitle("");
       setDescription("");
-      const d = initialDate ?? new Date();
-      setRange({ from: d, to: d });
+      const raw = initialDate ?? new Date();
+      const d = dateMax([raw, today]);
+      setSelectedDate(d);
       setCalMonth(d);
     }
   }, [open, initialDate, entry, draft]);
 
   const mutation = useMutation({
     mutationFn: async () => {
-      if (!start || !end) throw new Error("Velg datoer");
+      if (!selectedDate) throw new Error("Velg dato");
       const isCabin = uiCategory === "paradis" || uiCategory === "fjord";
       const cabinLabel =
         uiCategory === "paradis" ? "Paradis" : uiCategory === "fjord" ? "Fjordgløtt" : "";
@@ -129,8 +128,8 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
       const payload = {
         title: finalTitle,
         category,
-        start_date: toISODate(start),
-        end_date: toISODate(end),
+        start_date: toISODate(selectedDate),
+        end_date: toISODate(selectedDate),
         description: finalDesc || null,
       };
       if (entry) {
@@ -160,9 +159,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
 
   const canSubmit =
     title.trim().length > 0 &&
-    !!start &&
-    !!end &&
-    end >= start &&
+    !!selectedDate &&
     !mutation.isPending;
 
   return (
@@ -214,15 +211,11 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
 
           <div>
             <div className="mb-2 flex items-baseline justify-between">
-              <p className="text-base font-medium text-foreground">Datoer</p>
+              <p className="text-base font-medium text-foreground">Dato</p>
               <p className="text-sm text-muted-foreground">
-                {start && end
-                  ? start.getTime() === end.getTime()
-                    ? format(start, "d. MMM yyyy", { locale: nb })
-                    : `${format(start, "d. MMM", { locale: nb })} – ${format(end, "d. MMM yyyy", { locale: nb })}`
-                  : start
-                    ? `${format(start, "d. MMM yyyy", { locale: nb })} – velg sluttdato`
-                    : "Velg startdato"}
+                {selectedDate
+                  ? format(selectedDate, "d. MMM yyyy", { locale: nb })
+                  : "Velg dato"}
               </p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-2">
@@ -253,9 +246,9 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
                 />
               ) : (
                 <Calendar
-                  mode="range"
-                  selected={range as any}
-                  onSelect={(r: any) => setRange(r ?? undefined)}
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={(d) => d && setSelectedDate(d)}
                   month={calMonth}
                   onMonthChange={setCalMonth}
                   numberOfMonths={1}
