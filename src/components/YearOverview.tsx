@@ -88,11 +88,17 @@ function MiniMonth({
               onClick={() => inMonth && onDayClick(date)}
               className={cn(
                 "relative flex aspect-square overflow-hidden rounded-md text-xs transition-all",
-                inMonth ? "cursor-pointer hover:scale-110" : "opacity-0 pointer-events-none",
+                inMonth
+                  ? "cursor-pointer hover:scale-110 hover:ring-2 hover:ring-primary/40 hover:shadow-md active:scale-95"
+                  : "opacity-0 pointer-events-none",
                 !v && "bg-secondary/40 text-foreground hover:bg-secondary",
                 isToday && "ring-1 ring-foreground",
               )}
-              title={dayEntries.map((e) => e.title).join(", ")}
+              title={
+                dayEntries.length
+                  ? dayEntries.map((e) => e.title).join(", ")
+                  : "Legg til oppføring"
+              }
             >
               {dayEntries.length > 0 && (
                 <div className="absolute inset-0 flex flex-col">
