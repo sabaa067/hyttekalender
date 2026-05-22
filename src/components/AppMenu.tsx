@@ -61,7 +61,8 @@ export function AppMenu({ onOpenHistory }: Props) {
         <button
           type="button"
           aria-label="Meny"
-          className="fixed left-3 top-3 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/60 bg-card/80 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary sm:left-4 sm:top-4"
+          className="fixed left-3 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/60 bg-card/80 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary sm:left-4"
+          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
         >
           <Menu className="h-5 w-5" />
         </button>

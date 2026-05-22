@@ -1,6 +1,6 @@
 {
   "name": "Hyttekalender",
-  "short_name": "Hytte",
+  "short_name": "Hyttekalender",
   "description": "Familie hytte kalender",
   "start_url": "/",
   "scope": "/",
