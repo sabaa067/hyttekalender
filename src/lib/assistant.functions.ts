@@ -109,8 +109,8 @@ function fuzzyIncludes(haystack: string, needle: string): boolean {
 function formatDateRange(start: string, end: string, currentYear: number): string {
   const [sy, sm, sd] = start.split("-").map(Number);
   const [ey, em, ed] = end.split("-").map(Number);
-  const startLabel = `${sd}${sm === em && sy === ey ? "" : `. ${MONTH_LABELS[sm]}`}`;
-  const endLabel = `${ed}. ${MONTH_LABELS[em]}`;
+  const startLabel = `${sd}${sm === em && sy === ey ? "" : ` ${MONTH_LABELS[sm]}`}`;
+  const endLabel = `${ed} ${MONTH_LABELS[em]}`;
   const yearLabel = sy === currentYear && ey === currentYear ? "" : ` ${ey}`;
   if (start === end) return `${sd}. ${MONTH_LABELS[sm]}${sy === currentYear ? "" : ` ${sy}`}`;
   return `${startLabel}–${endLabel}${yearLabel}`;
