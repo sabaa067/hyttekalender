@@ -1,9 +1,9 @@
 {
-  "id": "/?app=Hyttekalender",
+  "id": "/",
   "name": "Hyttekalender",
   "short_name": "Hyttekalender",
   "description": "Familie hytte kalender",
-  "start_url": "/?app=Hyttekalender",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
