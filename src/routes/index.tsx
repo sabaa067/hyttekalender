@@ -31,6 +31,17 @@ import {
   type CalendarEntry,
 } from "@/lib/entries";
 import { CABIN_LOCATION_META, CATEGORY_META, type CabinLocation } from "@/lib/categories";
+
+const FILTER_META: Record<
+  Exclude<import("@/lib/entries").FilterKey, "holiday">,
+  { color: string; soft: string }
+> = {
+  paradis: { color: CABIN_LOCATION_META.paradis.color, soft: CABIN_LOCATION_META.paradis.soft },
+  fjord: { color: CABIN_LOCATION_META.fjord.color, soft: CABIN_LOCATION_META.fjord.soft },
+  event: { color: CATEGORY_META.event.color, soft: CATEGORY_META.event.soft },
+  highlight: { color: CATEGORY_META.highlight.color, soft: CATEGORY_META.highlight.soft },
+  note: { color: CATEGORY_META.note.color, soft: CATEGORY_META.note.soft },
+};
 import { generateHolidaysForYears } from "@/lib/holidays";
 
 type CabinLoc = Exclude<CabinLocation, "all">;
@@ -225,7 +236,7 @@ function Index() {
             </button>
             {FILTERS.map((f) => {
               const active = filters.has(f.key);
-              const meta = CATEGORY_META[f.key];
+              const meta = FILTER_META[f.key as Exclude<typeof f.key, "holiday">];
               return (
                 <button
                   key={f.key}
@@ -262,29 +273,6 @@ function Index() {
               );
             })()}
           </div>
-          {filters.has("cabin") && (
-            <div className="flex flex-wrap items-center justify-center gap-2 animate-in fade-in slide-in-from-top-1 duration-200">
-              {(["paradis", "fjord"] as const).map((loc) => {
-                const meta = CABIN_LOCATION_META[loc];
-                const active = cabinLocations.has(loc);
-                return (
-                  <button
-                    key={loc}
-                    type="button"
-                    onClick={() => toggleCabinLoc(loc)}
-                    className={cn(
-                      "rounded-full border px-3 py-1.5 text-xs font-medium transition-all duration-200 sm:text-sm",
-                      active
-                        ? cn(meta.color, "border-transparent shadow-md scale-[1.03]")
-                        : cn(meta.soft, "border-current/20 opacity-80 hover:opacity-100 hover:scale-[1.02]"),
-                    )}
-                  >
-                    {meta.label}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         <CalendarNav
