@@ -6,6 +6,147 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateHolidaysForYears } from "./holidays";
 import { detectCabinLocations } from "./categories";
 
+type RawEntry = {
+  id: string;
+  title: string;
+  category: string;
+  start_date: string;
+  end_date: string;
+  description?: string | null;
+};
+
+type IndexedEntry = RawEntry & {
+  cabins: string[];
+  search: string;
+  normalizedSearch: string;
+  normalizedCabins: string[];
+};
+
+const MONTHS: Record<string, number> = {
+  januar: 1,
+  jan: 1,
+  februar: 2,
+  feb: 2,
+  mars: 3,
+  april: 4,
+  apr: 4,
+  mai: 5,
+  juni: 6,
+  jun: 6,
+  juli: 7,
+  jul: 7,
+  august: 8,
+  aug: 8,
+  september: 9,
+  sep: 9,
+  oktober: 10,
+  okt: 10,
+  november: 11,
+  nov: 11,
+  desember: 12,
+  des: 12,
+};
+
+const MONTH_LABELS = [
+  "",
+  "januar",
+  "februar",
+  "mars",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+];
+
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .replaceAll("æ", "ae")
+    .replaceAll("ø", "o")
+    .replaceAll("å", "a")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stemNorwegianName(value: string): string {
+  const n = normalizeText(value);
+  return n.endsWith("s") && n.length > 4 ? n.slice(0, -1) : n;
+}
+
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j += 1) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+function fuzzyIncludes(haystack: string, needle: string): boolean {
+  const target = stemNorwegianName(needle);
+  if (target.length < 3) return false;
+  if (haystack.includes(target) || haystack.includes(`${target}s`)) return true;
+  const words = haystack.split(/\s+/).map(stemNorwegianName);
+  return words.some((w) => w === target || w.startsWith(target) || target.startsWith(w) || editDistance(w, target) <= 1);
+}
+
+function formatDateRange(start: string, end: string, currentYear: number): string {
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  const startLabel = `${sd}${sm === em && sy === ey ? "" : `. ${MONTH_LABELS[sm]}`}`;
+  const endLabel = `${ed}. ${MONTH_LABELS[em]}`;
+  const yearLabel = sy === currentYear && ey === currentYear ? "" : ` ${ey}`;
+  if (start === end) return `${sd}. ${MONTH_LABELS[sm]}${sy === currentYear ? "" : ` ${sy}`}`;
+  return `${startLabel}–${endLabel}${yearLabel}`;
+}
+
+function overlapsRange(entry: RawEntry, start: string, end: string): boolean {
+  return entry.start_date <= end && entry.end_date >= start;
+}
+
+function extractTimeRange(query: string, visibleYear?: number): { start: string; end: string; label: string } | null {
+  const q = normalizeText(query);
+  const yearMatch = q.match(/\b(20\d{2})\b/);
+  const year = yearMatch ? Number(yearMatch[1]) : (visibleYear ?? new Date().getFullYear());
+  if (/\bsommer(en)?\b/.test(q)) return { start: `${year}-06-01`, end: `${year}-08-31`, label: "i sommer" };
+  for (const [name, month] of Object.entries(MONTHS)) {
+    if (new RegExp(`\\b${name}\\b`).test(q)) {
+      const last = new Date(year, month, 0).getDate();
+      return { start: `${year}-${String(month).padStart(2, "0")}-01`, end: `${year}-${String(month).padStart(2, "0")}-${last}`, label: MONTH_LABELS[month] };
+    }
+  }
+  const dayMonth = q.match(/\b(\d{1,2})\s*\.?\s*(januar|jan|februar|feb|mars|april|apr|mai|juni|jun|juli|jul|august|aug|september|sep|oktober|okt|november|nov|desember|des)\b/);
+  if (dayMonth) {
+    const day = Number(dayMonth[1]);
+    const month = MONTHS[dayMonth[2]];
+    const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return { start: iso, end: iso, label: `${day}. ${MONTH_LABELS[month]}` };
+  }
+  return null;
+}
+
+function buildDirectReply(entries: IndexedEntry[], currentYear: number, prefix?: string): string {
+  const lines = entries.slice(0, 12).map((e) => `${e.title}: ${formatDateRange(e.start_date, e.end_date, currentYear)}`);
+  if (entries.length > 12) lines.push(`I tillegg finnes ${entries.length - 12} flere treff.`);
+  return [prefix, ...lines].filter(Boolean).join("\n");
+}
+
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((data: { query: string; context?: unknown; history?: unknown }) =>
     z
