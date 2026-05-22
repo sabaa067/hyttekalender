@@ -47,7 +47,7 @@ export function AssistantButton({
         </button>
       </DialogTrigger>
       <DialogContent
-        className="top-[8%] max-h-[85vh] translate-y-[-8%] gap-0 overflow-y-auto rounded-3xl border-border/60 bg-card/95 p-3 shadow-2xl backdrop-blur-xl sm:max-w-2xl sm:p-4"
+        className="top-[calc(env(safe-area-inset-top,0px)_+_1rem)] max-h-[calc(100dvh_-_env(safe-area-inset-top,0px)_-_2rem)] translate-y-0 gap-0 overflow-y-auto rounded-3xl border-border/60 bg-card/95 p-3 shadow-2xl backdrop-blur-xl sm:top-[8%] sm:max-h-[85vh] sm:translate-y-[-8%] sm:max-w-2xl sm:p-4"
       >
         <DialogTitle className="sr-only">AI-assistent</DialogTitle>
         <div className="mb-2 flex items-center gap-2 px-1 text-sm font-medium text-muted-foreground">

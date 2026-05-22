@@ -11,6 +11,7 @@ import {
 import appCss from "../styles.css?url";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/lib/auth";
+import { PwaMetadataRefresh } from "@/components/PwaMetadataRefresh";
 
 function NotFoundComponent() {
   return (
@@ -86,6 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         content: "black-translucent",
       },
       { name: "apple-mobile-web-app-title", content: "Hyttekalender" },
+      { name: "application-name", content: "Hyttekalender" },
       { title: "Hyttekalender" },
       { name: "description", content: "Familie hytte kalender" },
       { property: "og:title", content: "Hyttekalender" },
@@ -103,10 +105,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: appCss,
       },
-      { rel: "manifest", href: "/manifest.json" },
-      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
-      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
-      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icons/icon-512.png" },
+      { rel: "manifest", href: "/manifest.json?v=hyttekalender-2" },
+      { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png?v=hyttekalender-2" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png?v=hyttekalender-2" },
+      { rel: "icon", type: "image/png", sizes: "512x512", href: "/icons/icon-512.png?v=hyttekalender-2" },
     ],
   }),
   shellComponent: RootShell,
@@ -135,6 +137,7 @@ function RootComponent() {
   return (
     <QueryClientProvider client={queryClient}>
       <AuthProvider>
+        <PwaMetadataRefresh />
         <Outlet />
         <Toaster />
       </AuthProvider>

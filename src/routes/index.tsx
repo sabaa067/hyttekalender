@@ -420,8 +420,11 @@ function Index() {
       />
 
       <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
-        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
-          <SheetHeader>
+        <SheetContent
+          side="right"
+          className="w-full overflow-y-auto scroll-pt-[calc(env(safe-area-inset-top,0px)_+_2rem)] pt-[calc(env(safe-area-inset-top,0px)_+_2.25rem)] sm:max-w-md sm:pt-6"
+        >
+          <SheetHeader className="pr-8">
             <SheetTitle className="text-2xl">Historikk</SheetTitle>
           </SheetHeader>
           <div className="mt-6">
