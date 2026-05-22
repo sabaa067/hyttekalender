@@ -181,6 +181,7 @@ function Index() {
   }
 
   return (
+    <BiometricGate>
     <div
       className={cn(
         "min-h-screen transition-colors",
@@ -425,6 +426,7 @@ function Index() {
         </SheetContent>
       </Sheet>
     </div>
+    </BiometricGate>
   );
 }
 
