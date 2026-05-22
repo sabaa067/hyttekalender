@@ -15,6 +15,7 @@ import { AppMenu } from "@/components/AppMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { LoginGate } from "@/components/LoginGate";
 import { HistoryPanel } from "@/components/HistoryPanel";
+import { ProfileChip } from "@/components/ProfileChip";
 import { useAuth } from "@/lib/auth";
 import {
   Sheet,
@@ -165,6 +166,7 @@ function Index() {
 
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 pt-6 sm:gap-6 sm:pt-10">
         <header className="flex flex-col items-center gap-4 text-center">
+          <ProfileChip />
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
             Hyttekalender
           </h1>
