@@ -17,7 +17,9 @@ import { NotificationBell } from "@/components/NotificationBell";
 import { LoginGate } from "@/components/LoginGate";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { ProfileChip } from "@/components/ProfileChip";
+import { BiometricGate } from "@/components/BiometricGate";
 import { useAuth } from "@/lib/auth";
+import { usePersistedState } from "@/lib/persisted-state";
 import {
   Sheet,
   SheetContent,
@@ -56,7 +58,7 @@ type ViewMode = "modern" | "overview" | "excel";
 function Index() {
   const { user, loading: authLoading } = useAuth();
   const canEdit = user?.role === "admin";
-  const [view, setView] = useState<ViewMode>("modern");
+  const [view, setView] = usePersistedState<ViewMode>("hk_view", "modern");
   const setViewMode = (next: ViewMode) => {
     if (next === "modern") {
       const n = new Date();
@@ -65,12 +67,21 @@ function Index() {
     setView(next);
   };
   const ALL_MAIN_FILTERS: FilterKey[] = ["paradis", "fjord", "event", "highlight", "note"];
-  const [filters, setFilters] = useState<Set<FilterKey>>(
-    () => new Set(ALL_MAIN_FILTERS),
+  const [filters, setFilters] = usePersistedState<Set<FilterKey>>(
+    "hk_filters",
+    new Set(ALL_MAIN_FILTERS),
+    {
+      serialize: (s) => Array.from(s),
+      deserialize: (raw) =>
+        new Set((Array.isArray(raw) ? raw : ALL_MAIN_FILTERS) as FilterKey[]),
+    },
   );
   const [cabinLocations] = useState<Set<CabinLoc>>(() => new Set());
   // Høytider is OFF by default and is NOT toggled by "Alt".
-  const [showHolidays, setShowHolidays] = useState(false);
+  const [showHolidays, setShowHolidays] = usePersistedState<boolean>(
+    "hk_holidays",
+    false,
+  );
 
   const toggleFilter = (key: FilterKey) => {
     setFilters((prev) => {
@@ -91,10 +102,20 @@ function Index() {
       setShowHolidays(true);
     }
   };
-  const [monthDate, setMonthDate] = useState(() => {
-    const n = new Date();
-    return new Date(n.getFullYear(), n.getMonth(), 1);
-  });
+  const [monthDate, setMonthDate] = usePersistedState<Date>(
+    "hk_month",
+    (() => {
+      const n = new Date();
+      return new Date(n.getFullYear(), n.getMonth(), 1);
+    })(),
+    {
+      serialize: (d) => d.toISOString(),
+      deserialize: (raw) => {
+        const d = new Date(typeof raw === "string" ? raw : Date.now());
+        return new Date(d.getFullYear(), d.getMonth(), 1);
+      },
+    },
+  );
   const [year, setYear] = useState(() => new Date().getFullYear());
   const [entryOpen, setEntryOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
@@ -160,6 +181,7 @@ function Index() {
   }
 
   return (
+    <BiometricGate>
     <div
       className={cn(
         "min-h-screen transition-colors",
@@ -404,6 +426,7 @@ function Index() {
         </SheetContent>
       </Sheet>
     </div>
+    </BiometricGate>
   );
 }
 
