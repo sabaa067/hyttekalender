@@ -4,6 +4,7 @@ import { z } from "zod";
 import { createLovableAiGatewayProvider } from "./ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateHolidaysForYears } from "./holidays";
+import { detectCabinLocations } from "./categories";
 
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((data: { query: string; context?: unknown; history?: unknown }) =>
@@ -95,12 +96,42 @@ export const askAssistant = createServerFn({ method: "POST" })
       end_date: h.end_date,
       description: h.description,
     }));
-    const allEntries = [...entries, ...holidays];
+    // Berik hver oppføring med utledet metadata slik at modellen kan resonnere semantisk
+    // (hyttested, normalisert søketekst) i stedet for ren tekst-matching.
+    type RawEntry = {
+      id: string;
+      title: string;
+      category: string;
+      start_date: string;
+      end_date: string;
+      description?: string | null;
+    };
+    const enrich = (e: RawEntry) => {
+      const blob = `${e.title} ${e.description ?? ""}`.toLowerCase();
+      const cabinSet = detectCabinLocations(blob);
+      const cabins: string[] = [];
+      if (cabinSet.has("paradis")) cabins.push("Paradis");
+      if (cabinSet.has("fjord")) cabins.push("Fjordgløtt");
+      return {
+        id: e.id,
+        title: e.title,
+        category: e.category,
+        start_date: e.start_date,
+        end_date: e.end_date,
+        description: e.description ?? null,
+        cabins, // [] | ["Paradis"] | ["Fjordgløtt"] | ["Paradis","Fjordgløtt"]
+        search: blob.replace(/\s+/g, " ").trim(), // normalisert lowercase-tekst
+      };
+    };
+    const allEntries = [
+      ...(entries as RawEntry[]).map(enrich),
+      ...holidays.map(enrich),
+    ];
 
     const today = new Date().toISOString().slice(0, 10);
     const gateway = createLovableAiGatewayProvider(apiKey);
-    // Bruk rask flash-modell for lav latens. Kalenderdata er små og forhåndsindeksert på klienten.
-    const model = gateway("google/gemini-3-flash-preview");
+    // Bruk en sterkere modell for ekte semantisk resonnering, ikke bare nøkkelord-match.
+    const model = gateway("google/gemini-2.5-pro");
 
     const ResultSchema = z.object({
       intent: z.enum(["create", "answer"]),
@@ -126,6 +157,25 @@ export const askAssistant = createServerFn({ method: "POST" })
       "Du er en hjelpsom assistent for Hyttekalender – en norsk familiekalender.",
       userLine,
       `Dagens dato er ${today}. Året er ${new Date().getFullYear()}.`,
+      "",
+      "DU ER EN SEMANTISK RESONNERINGSMOTOR – IKKE EN SØKEMOTOR.",
+      "Forstå MENING og INTENSJON, ikke bare eksakte ord. Match navn og steder fuzzy. Ekspander vage uttrykk internt før du svarer.",
+      "",
+      "RESONNERINGSPROSESS (gjør dette internt for hvert spørsmål, ikke vis det i svaret):",
+      "1. Trekk ut entiteter: personer (Morten, Vera, Jørgen, Sander, Farfar, barn, familie ...), steder (Paradis, Fjordgløtt, 'hytta' = begge), kategorier (cabin/event/highlight/holiday/note), tidsuttrykk (dato, måned, sesong, høytid, 'denne uka', 'i sommer').",
+      "2. Ekspander vage uttrykk: 'på hytta' = category=cabin OG cabins inneholder Paradis ELLER Fjordgløtt. 'fri' = perioder UTEN bookinger i relevant kategori/sted. 'i sommer' = juni-august. 'til jul' = desember/julehøytid. 'familie' = alle familiemedlemmer.",
+      "3. Søk i HELE KALENDERDATA – sjekk title, description, search (normalisert blob), cabins (utledet hyttested), category, datoer. Bruk delstrenger og fuzzy-match: 'morten' matcher alt som inneholder 'morten' (inkl. 'Mortens familie'). 'paradis' matcher entries der cabins inneholder 'Paradis'.",
+      "4. Resonner over kombinasjoner: 'Morten på hytta i juli' = entries der search inneholder 'morten' OG category='cabin' OG datoer overlapper med juli.",
+      "5. Velg ALLE meningsfulle treff – ikke bare det første. List dem kronologisk.",
+      "",
+      "SPØRSMÅL → TOLKNING (eksempler):",
+      "- 'Når skal Morten på hytta' → person=Morten, kategori=cabin → finn alle cabin-entries der search inneholder 'morten'.",
+      "- 'Hvem skal til Paradis' → sted=Paradis → finn alle entries der cabins inneholder 'Paradis', list personer/titler.",
+      "- 'Når har Vera fri' → person=Vera → finn perioder UTEN Vera-relaterte entries i synlig periode.",
+      "- 'Hva skjer i juli' → tid=juli (inneværende år hvis ikke spesifisert) → list alle entries som overlapper juli.",
+      "- 'på hytta i sommer' → category=cabin OG måned ∈ {6,7,8}.",
+      "",
+      "Bare svar 'Fant ingen treff' når det virkelig ikke finnes NOEN meningsfull tolkning. Prøv minst 3 ekspansjoner først.",
       "",
       "SVARSTIL – VIKTIG:",
       "- Vær KORT, ROLIG og MENNESKELIG. Maks 1–4 linjer for vanlige svar.",
@@ -169,6 +219,7 @@ export const askAssistant = createServerFn({ method: "POST" })
       "Svar ALLTID på norsk. ALDRI på engelsk.",
       "",
       `KALENDERDATA (JSON, ${allEntries.length} oppføringer – LIVE fra databasen + genererte høytider):`,
+      "Felter: id, title, category, start_date, end_date, description, cabins (utledet liste: [] | ['Paradis'] | ['Fjordgløtt'] | begge), search (lowercase-normalisert tekst for matching).",
       JSON.stringify(allEntries),
     ].join("\n");
 
