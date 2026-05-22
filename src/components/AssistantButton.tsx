@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -46,23 +46,12 @@ export function AssistantButton({
         </button>
       </DialogTrigger>
       <DialogContent
-        className="top-[8%] max-h-[85vh] translate-y-0 gap-0 overflow-y-auto rounded-3xl border-border/60 bg-card/95 p-3 shadow-2xl backdrop-blur-xl sm:max-w-2xl sm:p-4"
-        showCloseButton={false}
+        className="top-[8%] max-h-[85vh] translate-y-[-8%] gap-0 overflow-y-auto rounded-3xl border-border/60 bg-card/95 p-3 shadow-2xl backdrop-blur-xl sm:max-w-2xl sm:p-4"
       >
         <DialogTitle className="sr-only">AI-assistent</DialogTitle>
-        <div className="mb-2 flex items-center justify-between px-1">
-          <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-            <Sparkles className="h-4 w-4" />
-            Spør kalenderen
-          </div>
-          <button
-            type="button"
-            onClick={() => setOpen(false)}
-            aria-label="Lukk"
-            className="rounded-full p-1.5 text-muted-foreground transition-colors hover:bg-secondary"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div className="mb-2 flex items-center gap-2 px-1 text-sm font-medium text-muted-foreground">
+          <Sparkles className="h-4 w-4" />
+          Spør kalenderen
         </div>
         <AssistantBar
           entries={entries}
