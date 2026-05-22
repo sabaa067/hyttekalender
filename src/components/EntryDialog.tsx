@@ -244,7 +244,9 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
               {monthPicker ? (
                 <InlineMonthPicker
                   value={calMonth}
-                  onSelect={(d) => {
+                  today={today}
+                  maxDate={maxDate}
+                  onSelect={(d: Date) => {
                     setCalMonth(d);
                     setMonthPicker(false);
                   }}
