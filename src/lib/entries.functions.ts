@@ -39,6 +39,22 @@ const deleteSchema = z.object({
   id: z.string().uuid(),
 });
 
+const listSchema = z.object({
+  token: z.string().min(1).max(500),
+});
+
+export const listEntriesFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => listSchema.parse(data))
+  .handler(async ({ data }) => {
+    await validateSessionToken(data.token);
+    const { data: rows, error } = await supabaseAdmin
+      .from("calendar_entries")
+      .select("*")
+      .order("start_date", { ascending: true });
+    if (error) throw new Error(error.message);
+    return rows ?? [];
+  });
+
 export const createEntryFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => createSchema.parse(data))
   .handler(async ({ data }) => {
