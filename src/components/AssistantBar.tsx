@@ -79,6 +79,8 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
             activeFilters: Array.from(context.activeFilters),
             activeCabinLocations: Array.from(context.activeCabinLocations),
             showHolidays: context.showHolidays,
+            userName: user?.name,
+            userRole: user?.role,
           }
         : undefined;
       // Bygg samtalehistorikk fra eldste til nyeste (siste 6 turer = 12 meldinger)
