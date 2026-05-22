@@ -255,6 +255,7 @@ function ExpandedCard({
   onOpenEvent,
   onClose,
   embedded,
+  canEdit,
 }: {
   item: HistoryItem;
   entries: CalendarEntry[];
@@ -266,6 +267,7 @@ function ExpandedCard({
   onOpenEvent: (e: CalendarEntry) => void;
   onClose?: () => void;
   embedded?: boolean;
+  canEdit?: boolean;
 }) {
   const { result, query } = item;
   const draft = result.draft;
@@ -348,7 +350,7 @@ function ExpandedCard({
         </div>
       )}
 
-      {result.intent === "create" && draft && (
+      {result.intent === "create" && draft && canEdit && (
         <div className="mt-3 space-y-3">
           <DraftPreview draft={draft} />
           <div className="flex flex-wrap gap-2">
