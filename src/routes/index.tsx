@@ -121,12 +121,6 @@ function Index() {
     return next as Set<FilterKey>;
   }, [filters, showHolidays]);
 
-  const monthLabel = monthDate.toLocaleDateString("no-NO", {
-    month: "long",
-    year: "numeric",
-  });
-  void monthLabel;
-
   const goPrev = () => {
     if (view === "modern") {
       setMonthDate(new Date(monthDate.getFullYear(), monthDate.getMonth() - 1, 1));
