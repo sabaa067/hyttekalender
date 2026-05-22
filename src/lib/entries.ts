@@ -1,5 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
-import { detectCabinLocations, type CabinLocation, type Category } from "./categories";
+import { detectCabinLocations, primaryCabinLocation, type CabinLocation, type Category } from "./categories";
 
 // Categories persisted in the DB (holiday is virtual, generated client-side).
 type DBCategory = Exclude<Category, "holiday">;
@@ -15,36 +15,45 @@ export type CalendarEntry = {
   updated_at: string;
 };
 
-export type FilterKey = Exclude<Category, "birthday">;
+export type FilterKey =
+  | "paradis"
+  | "fjord"
+  | "event"
+  | "highlight"
+  | "note"
+  | "holiday";
 
 export const FILTERS: { key: FilterKey; label: string }[] = [
-  { key: "cabin", label: "Hytte" },
+  { key: "paradis", label: "Paradis" },
+  { key: "fjord", label: "Fjordgløtt" },
   { key: "event", label: "Arrangementer" },
   { key: "highlight", label: "Høydepunkter" },
   { key: "note", label: "Notater" },
 ];
 
 function entryMatchesSingleFilter(e: CalendarEntry, f: FilterKey) {
+  if (f === "paradis" || f === "fjord") {
+    if (e.category !== "cabin") return false;
+    const loc = primaryCabinLocation(`${e.title} ${e.description ?? ""}`);
+    return loc === f;
+  }
   if (f === "highlight") return e.category === "highlight" || e.category === "birthday";
+  if (f === "holiday") return e.category === "holiday";
   return e.category === f;
 }
 
 export function entryMatchesFilters(e: CalendarEntry, active: Set<FilterKey>) {
   if (active.size === 0) return false;
-  if (e.category === "holiday") return (active as Set<string>).has("holiday");
   for (const f of active) if (entryMatchesSingleFilter(e, f)) return true;
   return false;
 }
 
 export function entryMatchesCabinLocations(
-  e: CalendarEntry,
-  active: Set<Exclude<CabinLocation, "all">>,
+  _e: CalendarEntry,
+  _active: Set<Exclude<CabinLocation, "all">>,
 ) {
-  if (active.size === 0) return true;
-  if (e.category !== "cabin") return true;
-  const detected = detectCabinLocations(`${e.title} ${e.description ?? ""}`);
-  for (const loc of detected) if (active.has(loc)) return true;
-  return false;
+  // Deprecated: Paradis/Fjordgløtt are now top-level filters; kept as no-op for compatibility.
+  return true;
 }
 
 export async function fetchEntries(): Promise<CalendarEntry[]> {
