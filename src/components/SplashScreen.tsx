@@ -10,7 +10,7 @@ export function SplashScreen() {
       }}
     >
       <img
-        src="/icons/icon-192.png"
+        src="/icons/icon-192.png?v=hyttekalender-2"
         alt="Hyttekalender"
         width={96}
         height={96}
