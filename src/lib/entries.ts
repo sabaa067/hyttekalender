@@ -36,6 +36,10 @@ function entryMatchesSingleFilter(e: CalendarEntry, f: FilterKey) {
   if (f === "paradis" || f === "fjord") {
     if (e.category !== "cabin") return false;
     const loc = primaryCabinLocation(`${e.title} ${e.description ?? ""}`);
+    // If we can detect a location, only the matching filter shows the entry.
+    // If no location keyword is present, the cabin entry is shown whenever
+    // either cabin filter is active, so it never silently disappears.
+    if (loc === null) return true;
     return loc === f;
   }
   if (f === "highlight") return e.category === "highlight" || e.category === "birthday";
