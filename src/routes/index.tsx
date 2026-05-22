@@ -11,6 +11,17 @@ import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
 import { AssistantBar } from "@/components/AssistantBar";
 import { OverviewLegend } from "@/components/OverviewLegend";
+import { AppMenu } from "@/components/AppMenu";
+import { NotificationBell } from "@/components/NotificationBell";
+import { LoginGate } from "@/components/LoginGate";
+import { HistoryPanel } from "@/components/HistoryPanel";
+import { useAuth } from "@/lib/auth";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import {
   fetchEntries,
   FILTERS,
@@ -30,6 +41,8 @@ export const Route = createFileRoute("/")({
 type ViewMode = "modern" | "overview" | "excel";
 
 function Index() {
+  const { user, loading: authLoading } = useAuth();
+  const canEdit = user?.role === "admin";
   const [view, setView] = useState<ViewMode>("modern");
   const setViewMode = (next: ViewMode) => {
     if (next === "modern") {
@@ -77,10 +90,12 @@ function Index() {
   const [initialDate, setInitialDate] = useState<Date | null>(null);
   const [draftEntry, setDraftEntry] = useState<Partial<CalendarEntry> | null>(null);
   const [detailDate, setDetailDate] = useState<Date | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
 
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["entries"],
     queryFn: fetchEntries,
+    enabled: !!user,
   });
 
   const holidayEntries = useMemo(() => {
@@ -131,6 +146,13 @@ function Index() {
 
   const isEmpty = !isLoading && entries.length === 0;
 
+  if (authLoading) {
+    return <div className="min-h-screen bg-secondary/40" />;
+  }
+  if (!user) {
+    return <LoginGate />;
+  }
+
   return (
     <div
       className={cn(
@@ -138,10 +160,13 @@ function Index() {
         view === "modern" ? "bg-secondary/40" : "bg-background",
       )}
     >
+      <AppMenu onOpenHistory={() => setHistoryOpen(true)} />
+      <NotificationBell onOpenHistory={() => setHistoryOpen(true)} />
+
       <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 pt-6 sm:gap-6 sm:pt-10">
         <header className="flex flex-col items-center gap-4 text-center">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
-            Familiekalender
+            Hyttekalender
           </h1>
         </header>
 
@@ -340,23 +365,25 @@ function Index() {
 
       {view === "overview" && <OverviewLegend />}
 
-      <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 p-4 backdrop-blur">
-        <div className="mx-auto flex max-w-3xl">
-          <Button
-            size="lg"
-            className="h-16 w-full rounded-2xl text-lg font-semibold shadow-md"
-            onClick={() => {
-              setEditingEntry(null);
-              setInitialDate(null);
-              setDraftEntry(null);
-              setEntryOpen(true);
-            }}
-          >
-            <Plus className="!h-6 !w-6" />
-            Ny oppføring
-          </Button>
+      {canEdit && (
+        <div className="fixed inset-x-0 bottom-0 z-10 border-t border-border bg-background/90 p-4 backdrop-blur">
+          <div className="mx-auto flex max-w-3xl">
+            <Button
+              size="lg"
+              className="h-16 w-full rounded-2xl text-lg font-semibold shadow-md"
+              onClick={() => {
+                setEditingEntry(null);
+                setInitialDate(null);
+                setDraftEntry(null);
+                setEntryOpen(true);
+              }}
+            >
+              <Plus className="!h-6 !w-6" />
+              Ny oppføring
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
 
       <EntryDialog
         open={entryOpen}
@@ -388,6 +415,17 @@ function Index() {
           setEntryOpen(true);
         }}
       />
+
+      <Sheet open={historyOpen} onOpenChange={setHistoryOpen}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-md">
+          <SheetHeader>
+            <SheetTitle className="text-2xl">Historikk</SheetTitle>
+          </SheetHeader>
+          <div className="mt-6">
+            <HistoryPanel />
+          </div>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
