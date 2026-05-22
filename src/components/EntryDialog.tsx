@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, startOfDay, startOfMonth, addYears, addMonths, isSameMonth, isBefore } from "date-fns";
 import { nb } from "date-fns/locale";
 
 import {
@@ -17,8 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { MonthJumper } from "@/components/MonthJumper";
 import { ChevronDown } from "lucide-react";
 
 import {
@@ -71,11 +69,13 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
   const [description, setDescription] = useState("");
   const [range, setRange] = useState<{ from?: Date; to?: Date } | undefined>(undefined);
   const [calMonth, setCalMonth] = useState<Date>(() => new Date());
-  const [jumpOpen, setJumpOpen] = useState(false);
+  const [monthPicker, setMonthPicker] = useState(false);
   const qc = useQueryClient();
   const isEdit = !!entry;
   const start = range?.from;
   const end = range?.to ?? range?.from;
+  const today = startOfDay(new Date());
+  const maxDate = addYears(today, 2);
 
   useEffect(() => {
     if (!open) return;
@@ -227,53 +227,45 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
             </div>
             <div className="rounded-2xl border border-border bg-card p-2">
               <div className="flex justify-center px-2 pt-1">
-                <Popover open={jumpOpen} onOpenChange={setJumpOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold capitalize text-foreground transition-colors hover:bg-secondary"
-                    >
-                      {format(calMonth, "LLLL yyyy", { locale: nb })}
-                      <ChevronDown className="h-4 w-4 opacity-60" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="center"
-                    className="w-[min(92vw,22rem)] rounded-2xl border-border/60 bg-card/95 p-3 shadow-xl backdrop-blur"
-                  >
-                    <div className="mb-2 flex items-center justify-between px-1">
-                      <p className="text-sm font-semibold text-foreground">Hopp til måned</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalMonth(new Date());
-                          setJumpOpen(false);
-                        }}
-                        className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary/70"
-                      >
-                        I dag
-                      </button>
-                    </div>
-                    <MonthJumper
-                      monthDate={calMonth}
-                      onSelect={(d) => {
-                        setCalMonth(d);
-                        setJumpOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <button
+                  type="button"
+                  onClick={() => setMonthPicker((v) => !v)}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold capitalize text-foreground transition-colors hover:bg-secondary"
+                >
+                  {format(calMonth, "LLLL yyyy", { locale: nb })}
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 opacity-60 transition-transform",
+                      monthPicker && "rotate-180",
+                    )}
+                  />
+                </button>
               </div>
-              <Calendar
-                mode="range"
-                selected={range as any}
-                onSelect={(r: any) => setRange(r ?? undefined)}
-                month={calMonth}
-                onMonthChange={setCalMonth}
-                numberOfMonths={1}
-                locale={nb}
-                className={cn("p-2 pointer-events-auto mx-auto")}
-              />
+              {monthPicker ? (
+                <InlineMonthPicker
+                  value={calMonth}
+                  today={today}
+                  maxDate={maxDate}
+                  onSelect={(d: Date) => {
+                    setCalMonth(d);
+                    setMonthPicker(false);
+                  }}
+                />
+              ) : (
+                <Calendar
+                  mode="range"
+                  selected={range as any}
+                  onSelect={(r: any) => setRange(r ?? undefined)}
+                  month={calMonth}
+                  onMonthChange={setCalMonth}
+                  numberOfMonths={1}
+                  locale={nb}
+                  startMonth={startOfMonth(today)}
+                  endMonth={maxDate}
+                  disabled={{ before: today, after: maxDate }}
+                  className={cn("p-2 pointer-events-auto mx-auto")}
+                />
+              )}
             </div>
           </div>
 
@@ -310,5 +302,65 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function InlineMonthPicker({
+  value,
+  today,
+  maxDate,
+  onSelect,
+}: {
+  value: Date;
+  today: Date;
+  maxDate: Date;
+  onSelect: (d: Date) => void;
+}) {
+  const months: Date[] = [];
+  let cursor = startOfMonth(today);
+  const end = startOfMonth(maxDate);
+  while (!isBefore(end, cursor)) {
+    months.push(cursor);
+    cursor = addMonths(cursor, 1);
+  }
+  const byYear = new Map<number, Date[]>();
+  for (const m of months) {
+    const y = m.getFullYear();
+    if (!byYear.has(y)) byYear.set(y, []);
+    byYear.get(y)!.push(m);
+  }
+  return (
+    <div className="max-h-[20rem] space-y-3 overflow-y-auto p-3 animate-in fade-in-50">
+      {Array.from(byYear.entries()).map(([year, ms]) => (
+        <div key={year}>
+          <p className="mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            {year}
+          </p>
+          <div className="grid grid-cols-3 gap-1.5">
+            {ms.map((m) => {
+              const active = isSameMonth(m, value);
+              const isCurrent = isSameMonth(m, today);
+              return (
+                <button
+                  key={m.toISOString()}
+                  type="button"
+                  onClick={() => onSelect(m)}
+                  className={cn(
+                    "rounded-xl px-2 py-2.5 text-sm font-medium capitalize transition-all",
+                    active
+                      ? "bg-foreground text-background shadow-sm"
+                      : isCurrent
+                      ? "bg-secondary text-foreground ring-1 ring-foreground/20"
+                      : "bg-background text-foreground hover:bg-secondary",
+                  )}
+                >
+                  {format(m, "LLL", { locale: nb })}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+    </div>
   );
 }
