@@ -1,6 +1,14 @@
-import { useState } from "react";
-import { Menu, LogIn, LogOut, History, User as UserIcon } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Menu, LogIn, LogOut, History, User as UserIcon, Fingerprint } from "lucide-react";
 import { useAuth } from "@/lib/auth";
+import {
+  disableBiometric,
+  enableBiometric,
+  isBiometricEnabled,
+  isBiometricSupported,
+} from "@/lib/biometric";
+import { Switch } from "@/components/ui/switch";
+import { toast } from "sonner";
 import {
   Sheet,
   SheetContent,
@@ -17,6 +25,35 @@ type Props = {
 export function AppMenu({ onOpenHistory }: Props) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const supported = isBiometricSupported();
+  const [bioOn, setBioOn] = useState(false);
+  const [bioBusy, setBioBusy] = useState(false);
+
+  useEffect(() => {
+    if (open) setBioOn(isBiometricEnabled());
+  }, [open]);
+
+  const toggleBio = async (next: boolean) => {
+    if (!user) return;
+    setBioBusy(true);
+    try {
+      if (next) {
+        await enableBiometric({ id: user.id, name: user.name });
+        setBioOn(true);
+        toast.success("Face ID / biometri aktivert");
+      } else {
+        disableBiometric();
+        setBioOn(false);
+        toast.success("Biometri deaktivert");
+      }
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : "Kunne ikke aktivere biometri",
+      );
+    } finally {
+      setBioBusy(false);
+    }
+  };
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
@@ -57,6 +94,24 @@ export function AppMenu({ onOpenHistory }: Props) {
               onOpenHistory();
             }}
           />
+          {user && supported && (
+            <div className="mt-1 flex items-center justify-between rounded-2xl px-3 py-3 hover:bg-secondary/60">
+              <div className="flex items-center gap-3">
+                <span className="text-muted-foreground">
+                  <Fingerprint className="h-4 w-4" />
+                </span>
+                <div className="text-left">
+                  <p className="text-base font-medium leading-tight">Bruk Face ID</p>
+                  <p className="text-xs text-muted-foreground">Lås opp raskt neste gang</p>
+                </div>
+              </div>
+              <Switch
+                checked={bioOn}
+                disabled={bioBusy}
+                onCheckedChange={toggleBio}
+              />
+            </div>
+          )}
           {user ? (
             <MenuButton
               icon={<LogOut className="h-4 w-4" />}
