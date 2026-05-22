@@ -326,6 +326,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const wantsCabin = /\b(hytte|hytta|hytten|hyttetur|hytteturer|paradis|fjordglott|fjord)\b/.test(qNorm);
     const wantsAvailability = /\b(fri|ledig|ledige|aapen|apen|available)\b/.test(qNorm);
     const wantsFuture = /\b(nar|skal|kommer|reiser|drar|neste|fremover|framtid|future)\b/.test(qNorm);
+    const isCreateIntent = /\b(legg inn|legg til|opprett|registrer|lag|sett inn)\b/.test(qNorm);
     const placeFilters = [
       /\bparadis\b/.test(qNorm) ? "paradis" : null,
       /\bfjord(glott)?\b/.test(qNorm) ? "fjordglott" : null,
@@ -370,7 +371,7 @@ export const askAssistant = createServerFn({ method: "POST" })
       .sort((a, b) => a.entry.start_date.localeCompare(b.entry.start_date))
       .map((item) => item.entry);
 
-    const deterministicAnswer = hasEntityIntent && focusedMatches.length > 0 && !wantsAvailability
+    const deterministicAnswer = hasEntityIntent && focusedMatches.length > 0 && !wantsAvailability && !isCreateIntent
       ? {
           intent: "answer" as const,
           reply: buildDirectReply(focusedMatches, nowYear),
@@ -378,6 +379,8 @@ export const askAssistant = createServerFn({ method: "POST" })
           suggestions: ["Vis flere hytteturer", "Hva skjer samme helg?", "Hvem er på hytta i sommer?"],
         }
       : null;
+
+    if (deterministicAnswer) return deterministicAnswer;
 
     const system = [
       "Du er en hjelpsom assistent for Hyttekalender – en norsk familiekalender.",
