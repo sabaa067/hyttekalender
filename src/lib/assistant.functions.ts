@@ -19,6 +19,8 @@ export const askAssistant = createServerFn({ method: "POST" })
             activeFilters: z.array(z.string()).optional(),
             activeCabinLocations: z.array(z.string()).optional(),
             showHolidays: z.boolean().optional(),
+            userName: z.string().optional(),
+            userRole: z.string().optional(),
           })
           .optional(),
         history: z
