@@ -22,9 +22,10 @@ type Props = {
   filters: Set<FilterKey>;
   cabinLocations: Set<Exclude<CabinLocation, "all">>;
   onDayClick: (date: Date) => void;
+  onEntryClick?: (entry: CalendarEntry) => void;
 };
 
-export function ExcelView({ year, entries, filters, cabinLocations, onDayClick }: Props) {
+export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, onEntryClick }: Props) {
   const visible = useMemo(
     () =>
       entries.filter(
@@ -81,11 +82,14 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick }
                     <td
                       key={mIdx}
                       className={cn(
-                        "min-w-[110px] cursor-pointer border-b border-r border-border align-top p-1 transition-colors hover:bg-accent/40",
+                        "group min-w-[110px] cursor-pointer border-b border-r border-border align-top p-1 transition-all hover:bg-accent/40 hover:ring-1 hover:ring-inset hover:ring-primary/30 active:bg-accent/60",
                         isWeekend && "bg-secondary/40",
                         isToday && "ring-2 ring-foreground ring-inset",
                       )}
                       onClick={() => onDayClick(date)}
+                      role="button"
+                      tabIndex={0}
+                      aria-label={`Legg til oppføring ${iso}`}
                     >
                       <div className="flex flex-col gap-0.5">
                         {dayEntries.map((e) => {
@@ -100,17 +104,23 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick }
                               ? v.soft
                               : "bg-card border border-border text-muted-foreground";
                           return (
-                            <div
+                            <button
                               key={e.id}
+                              type="button"
+                              onClick={(ev) => {
+                                ev.stopPropagation();
+                                if (onEntryClick) onEntryClick(e);
+                                else onDayClick(date);
+                              }}
                               className={cn(
-                                "flex items-center gap-1 truncate rounded px-1 py-0.5 text-[10px] font-medium",
+                                "flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] font-medium transition-transform hover:scale-[1.02] hover:shadow",
                                 style,
                               )}
                               title={e.title}
                             >
                               {isBday && <Cake className="h-2.5 w-2.5 shrink-0" />}
                               <span className="truncate">{e.title}</span>
-                            </div>
+                            </button>
                           );
                         })}
                       </div>
