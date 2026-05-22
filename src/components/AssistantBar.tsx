@@ -37,6 +37,23 @@ type HistoryItem = {
   result: Result;
 };
 
+// Stripp dekorative tegn slik at AI-svar alltid føles rene og rolige.
+function cleanReply(text: string): string {
+  if (!text) return text;
+  return text
+    // Fjern vanlige punkt-/pil-/separator-symboler i start av linjer
+    .split("\n")
+    .map((line) => line.replace(/^\s*(?:[-*•●◦▪►▶→⇒»·]+|[-*]{2,}|={2,})\s*/u, "").trimEnd())
+    .join("\n")
+    // Fjern markdown-fete/kursiv-stjerner og overskrifter
+    .replace(/\*\*(.+?)\*\*/g, "$1")
+    .replace(/(^|\s)\*(?!\s)([^*\n]+?)\*(?=\s|$)/g, "$1$2")
+    .replace(/^#{1,6}\s+/gm, "")
+    // Komprimer tre+ tomlinjer til to
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
 const PLACEHOLDERS = [
   "Hva skjer 17 mai?",
   "Legg inn hyttetur 12–15 juli",
@@ -81,6 +98,15 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
             showHolidays: context.showHolidays,
             userName: user?.name,
             userRole: user?.role,
+            // Forhåndsindeksert kalender sendes med – server slipper DB-rundtur og svar blir raskere.
+            entries: entries.map((e) => ({
+              id: e.id,
+              title: e.title,
+              category: e.category,
+              start_date: e.start_date,
+              end_date: e.end_date,
+              description: e.description,
+            })),
           }
         : undefined;
       // Bygg samtalehistorikk fra eldste til nyeste (siste 6 turer = 12 meldinger)
@@ -94,7 +120,8 @@ export function AssistantBar({ entries, onEditDraft, onOpenEvent, context }: Pro
         hist.push({ role: "assistant", content: t.result.reply });
       }
       const r = (await ask({ data: { query: vars.q, context: ctx, history: hist } })) as Result;
-      return { ...vars, result: r };
+      const cleaned: Result = { ...r, reply: cleanReply(r.reply ?? "") };
+      return { ...vars, result: cleaned };
     },
     onSuccess: ({ itemId, result }) => {
       setHistory((h) => h.map((it) => (it.id === itemId ? { ...it, result } : it)));
