@@ -130,8 +130,9 @@ export const askAssistant = createServerFn({ method: "POST" })
 
     const today = new Date().toISOString().slice(0, 10);
     const gateway = createLovableAiGatewayProvider(apiKey);
-    // Bruk en sterkere modell for ekte semantisk resonnering, ikke bare nøkkelord-match.
-    const model = gateway("google/gemini-2.5-pro");
+    // Rask modell med moderne resonneringsevne – mye raskere enn 2.5-pro,
+    // samtidig sterk nok til semantisk tolkning og fuzzy navnematching.
+    const model = gateway("google/gemini-3.5-flash");
 
     const ResultSchema = z.object({
       intent: z.enum(["create", "answer"]),
@@ -153,6 +154,37 @@ export const askAssistant = createServerFn({ method: "POST" })
     const userLine = (ctx as { userName?: string; userRole?: string }).userName
       ? `Pålogget bruker: ${(ctx as { userName?: string }).userName} (${(ctx as { userRole?: string }).userRole ?? "admin"}).`
       : "Pålogget bruker: ukjent.";
+
+    // Bygg en lett "glossar" over kjente entiteter i kalenderen slik at modellen
+    // kan fuzzy-matche navn (f.eks. "morten" → "Mortens familie") uten å gjette.
+    const nameTokens = new Map<string, number>();
+    const PLACE_RE = /paradis|fjordgl(ø|o)tt|fjordglott/i;
+    const STOPWORDS = new Set([
+      "og","på","i","til","fra","med","hos","for","de","den","det","en","et","av","om","som","er","var","skal","har","ikke","ved","etter","før","som","seg","sin","sitt","sine","vår","våre","oss","alle","noen","når","hva","hvor","hvem","hvilken","hvilke","hvordan","hytte","hytta","tur","helg","uke","ferie","dag","kveld","kveld","morgen","natt","kalender","arrangement","møte","fest","sommer","vinter","høst","vår","påske","jul","nyttår","st","kl","ca","ny","gammel","stor","liten","fri","ledig","opptatt","fullt","stengt","åpent","kommer","drar","reiser","ankommer","ankomst","avreise","besøk","besøker","barn","barna","familie","familien","mamma","pappa","mor","far","onkel","tante","bestemor","bestefar","farfar","farmor","morfar","mormor","oss","dem","seg",
+    ]);
+    for (const e of allEntries) {
+      const text = `${e.title} ${e.description ?? ""}`;
+      const tokens = text
+        .split(/[^\p{L}\p{N}'-]+/u)
+        .map((t) => t.trim())
+        .filter((t) => t.length >= 3 && !PLACE_RE.test(t));
+      for (const raw of tokens) {
+        const lower = raw.toLowerCase();
+        if (STOPWORDS.has(lower)) continue;
+        // Behold ord som starter med stor bokstav (sannsynlige navn) ELLER inneholder apostrof.
+        const looksLikeName = /^[A-ZÆØÅ]/.test(raw) || raw.includes("'");
+        if (!looksLikeName) continue;
+        // Normaliser eieform: "Mortens" → "Morten" som hovedform, behold variant.
+        const normalized = raw.replace(/[''']s?$|s$/u, "");
+        if (normalized.length < 3) continue;
+        nameTokens.set(normalized, (nameTokens.get(normalized) ?? 0) + 1);
+      }
+    }
+    const knownNames = [...nameTokens.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 60)
+      .map(([n]) => n);
+
     const system = [
       "Du er en hjelpsom assistent for Hyttekalender – en norsk familiekalender.",
       userLine,
@@ -176,6 +208,14 @@ export const askAssistant = createServerFn({ method: "POST" })
       "- 'på hytta i sommer' → category=cabin OG måned ∈ {6,7,8}.",
       "",
       "Bare svar 'Fant ingen treff' når det virkelig ikke finnes NOEN meningsfull tolkning. Prøv minst 3 ekspansjoner først.",
+      "ABSOLUTT FORBUDT å svare 'Fant ingen treff' uten først å ha:",
+      "(a) sjekket KJENTE NAVN under for fuzzy-match (delstreng, første 3-4 bokstaver),",
+      "(b) prøvd minst 3 ulike søkebegrep,",
+      "(c) sett om noen entries overlapper tidsrommet uansett person.",
+      "Hvis du fortsatt ikke finner noe: foreslå 2-3 omformuleringer i 'suggestions' som faktisk refererer ekte navn/steder/datoer fra KALENDERDATA – aldri fiktive.",
+      "",
+      `KJENTE NAVN OG ENTITETER i kalenderen (bruk for fuzzy-match): ${knownNames.length ? knownNames.join(", ") : "(ingen navn registrert ennå)"}.`,
+      "Eksempel: bruker skriver 'morten'. Søk i KJENTE NAVN, finn 'Morten', match alle entries der search inneholder 'morten' (inkl. eieformer som 'Mortens').",
       "",
       "SVARSTIL – VIKTIG:",
       "- Vær KORT, ROLIG og MENNESKELIG. Maks 1–4 linjer for vanlige svar.",
