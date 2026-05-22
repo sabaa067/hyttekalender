@@ -6,6 +6,193 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateHolidaysForYears } from "./holidays";
 import { detectCabinLocations } from "./categories";
 
+type RawEntry = {
+  id: string;
+  title: string;
+  category: string;
+  start_date: string;
+  end_date: string;
+  description?: string | null;
+};
+
+type IndexedEntry = RawEntry & {
+  cabins: string[];
+  search: string;
+  normalizedSearch: string;
+  normalizedCabins: string[];
+};
+
+const MONTHS: Record<string, number> = {
+  januar: 1,
+  jan: 1,
+  februar: 2,
+  feb: 2,
+  mars: 3,
+  april: 4,
+  apr: 4,
+  mai: 5,
+  juni: 6,
+  jun: 6,
+  juli: 7,
+  jul: 7,
+  august: 8,
+  aug: 8,
+  september: 9,
+  sep: 9,
+  oktober: 10,
+  okt: 10,
+  november: 11,
+  nov: 11,
+  desember: 12,
+  des: 12,
+};
+
+const MONTH_LABELS = [
+  "",
+  "januar",
+  "februar",
+  "mars",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+];
+
+const QUERY_NON_ENTITY_WORDS = new Set([
+  "nar",
+  "hva",
+  "hvem",
+  "hvor",
+  "hvordan",
+  "pa",
+  "til",
+  "fra",
+  "skal",
+  "kommer",
+  "reiser",
+  "drar",
+  "neste",
+  "vis",
+  "finn",
+  "fortell",
+  "liste",
+  "list",
+  "alle",
+  "hytte",
+  "hytta",
+  "hytten",
+  "hyttetur",
+  "hytteturer",
+  "paradis",
+  "fjord",
+  "fjordglott",
+  "fri",
+  "ledig",
+  "ledige",
+  "sommer",
+  "januar",
+  "februar",
+  "mars",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+]);
+
+function normalizeText(value: string): string {
+  return value
+    .toLowerCase()
+    .replaceAll("æ", "ae")
+    .replaceAll("ø", "o")
+    .replaceAll("å", "a")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function stemNorwegianName(value: string): string {
+  const n = normalizeText(value);
+  return n.endsWith("s") && n.length > 4 ? n.slice(0, -1) : n;
+}
+
+function editDistance(a: string, b: string): number {
+  if (a === b) return 0;
+  if (Math.abs(a.length - b.length) > 2) return 3;
+  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j += 1) dp[0][j] = j;
+  for (let i = 1; i <= a.length; i += 1) {
+    for (let j = 1; j <= b.length; j += 1) {
+      dp[i][j] = Math.min(
+        dp[i - 1][j] + 1,
+        dp[i][j - 1] + 1,
+        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
+      );
+    }
+  }
+  return dp[a.length][b.length];
+}
+
+function fuzzyIncludes(haystack: string, needle: string): boolean {
+  const target = stemNorwegianName(needle);
+  if (target.length < 3) return false;
+  if (haystack.includes(target) || haystack.includes(`${target}s`)) return true;
+  const words = haystack.split(/\s+/).map(stemNorwegianName);
+  return words.some((w) => w === target || w.startsWith(target) || target.startsWith(w) || editDistance(w, target) <= 1);
+}
+
+function formatDateRange(start: string, end: string, currentYear: number): string {
+  const [sy, sm, sd] = start.split("-").map(Number);
+  const [ey, em, ed] = end.split("-").map(Number);
+  const startLabel = `${sd}${sm === em && sy === ey ? "" : ` ${MONTH_LABELS[sm]}`}`;
+  const endLabel = `${ed} ${MONTH_LABELS[em]}`;
+  const yearLabel = sy === currentYear && ey === currentYear ? "" : ` ${ey}`;
+  if (start === end) return `${sd}. ${MONTH_LABELS[sm]}${sy === currentYear ? "" : ` ${sy}`}`;
+  return `${startLabel}–${endLabel}${yearLabel}`;
+}
+
+function overlapsRange(entry: RawEntry, start: string, end: string): boolean {
+  return entry.start_date <= end && entry.end_date >= start;
+}
+
+function extractTimeRange(query: string, visibleYear?: number): { start: string; end: string; label: string } | null {
+  const q = normalizeText(query);
+  const yearMatch = q.match(/\b(20\d{2})\b/);
+  const year = yearMatch ? Number(yearMatch[1]) : (visibleYear ?? new Date().getFullYear());
+  if (/\bsommer(en)?\b/.test(q)) return { start: `${year}-06-01`, end: `${year}-08-31`, label: "i sommer" };
+  for (const [name, month] of Object.entries(MONTHS)) {
+    if (new RegExp(`\\b${name}\\b`).test(q)) {
+      const last = new Date(year, month, 0).getDate();
+      return { start: `${year}-${String(month).padStart(2, "0")}-01`, end: `${year}-${String(month).padStart(2, "0")}-${last}`, label: MONTH_LABELS[month] };
+    }
+  }
+  const dayMonth = q.match(/\b(\d{1,2})\s*\.?\s*(januar|jan|februar|feb|mars|april|apr|mai|juni|jun|juli|jul|august|aug|september|sep|oktober|okt|november|nov|desember|des)\b/);
+  if (dayMonth) {
+    const day = Number(dayMonth[1]);
+    const month = MONTHS[dayMonth[2]];
+    const iso = `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    return { start: iso, end: iso, label: `${day}. ${MONTH_LABELS[month]}` };
+  }
+  return null;
+}
+
+function buildDirectReply(entries: IndexedEntry[], currentYear: number, prefix?: string): string {
+  const lines = entries.slice(0, 12).map((e) => `${e.title}: ${formatDateRange(e.start_date, e.end_date, currentYear)}`);
+  if (entries.length > 12) lines.push(`I tillegg finnes ${entries.length - 12} flere treff.`);
+  return [prefix, ...lines].filter(Boolean).join("\n");
+}
+
 export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((data: { query: string; context?: unknown; history?: unknown }) =>
     z
@@ -53,7 +240,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const fallback = {
       intent: "answer" as const,
       reply:
-        "Fant ingen treff. Prøv et av forslagene under.",
+        "Jeg klarte ikke hente et trygt svar akkurat nå. Prøv igjen om litt.",
       suggestions: [
         "Hva skjer 17. mai?",
         "Når er Mortens familie på Paradis?",
@@ -98,20 +285,13 @@ export const askAssistant = createServerFn({ method: "POST" })
     }));
     // Berik hver oppføring med utledet metadata slik at modellen kan resonnere semantisk
     // (hyttested, normalisert søketekst) i stedet for ren tekst-matching.
-    type RawEntry = {
-      id: string;
-      title: string;
-      category: string;
-      start_date: string;
-      end_date: string;
-      description?: string | null;
-    };
-    const enrich = (e: RawEntry) => {
+    const enrich = (e: RawEntry): IndexedEntry => {
       const blob = `${e.title} ${e.description ?? ""}`.toLowerCase();
       const cabinSet = detectCabinLocations(blob);
       const cabins: string[] = [];
       if (cabinSet.has("paradis")) cabins.push("Paradis");
       if (cabinSet.has("fjord")) cabins.push("Fjordgløtt");
+      const search = blob.replace(/\s+/g, " ").trim();
       return {
         id: e.id,
         title: e.title,
@@ -120,7 +300,9 @@ export const askAssistant = createServerFn({ method: "POST" })
         end_date: e.end_date,
         description: e.description ?? null,
         cabins, // [] | ["Paradis"] | ["Fjordgløtt"] | ["Paradis","Fjordgløtt"]
-        search: blob.replace(/\s+/g, " ").trim(), // normalisert lowercase-tekst
+        search,
+        normalizedSearch: normalizeText(`${e.title} ${e.description ?? ""} ${e.category} ${cabins.join(" ")}`),
+        normalizedCabins: cabins.map(normalizeText),
       };
     };
     const allEntries = [
@@ -162,6 +344,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const STOPWORDS = new Set([
       "og","på","i","til","fra","med","hos","for","de","den","det","en","et","av","om","som","er","var","skal","har","ikke","ved","etter","før","som","seg","sin","sitt","sine","vår","våre","oss","alle","noen","når","hva","hvor","hvem","hvilken","hvilke","hvordan","hytte","hytta","tur","helg","uke","ferie","dag","kveld","kveld","morgen","natt","kalender","arrangement","møte","fest","sommer","vinter","høst","vår","påske","jul","nyttår","st","kl","ca","ny","gammel","stor","liten","fri","ledig","opptatt","fullt","stengt","åpent","kommer","drar","reiser","ankommer","ankomst","avreise","besøk","besøker","barn","barna","familie","familien","mamma","pappa","mor","far","onkel","tante","bestemor","bestefar","farfar","farmor","morfar","mormor","oss","dem","seg",
     ]);
+    const normalizedStopwords = new Set([...STOPWORDS].map(normalizeText));
     for (const e of allEntries) {
       const text = `${e.title} ${e.description ?? ""}`;
       const tokens = text
@@ -184,6 +367,77 @@ export const askAssistant = createServerFn({ method: "POST" })
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)
       .map(([n]) => n);
+
+    const qNorm = normalizeText(data.query);
+    const queryWords = qNorm.split(/\s+/).filter((w) => w.length >= 3 && !normalizedStopwords.has(w));
+    const wantsCabin = /\b(hytte|hytta|hytten|hyttetur|hytteturer|paradis|fjordglott|fjord)\b/.test(qNorm);
+    const wantsAvailability = /\b(fri|ledig|ledige|aapen|apen|available)\b/.test(qNorm);
+    const wantsFuture = /\b(nar|skal|kommer|reiser|drar|neste|fremover|framtid|future)\b/.test(qNorm);
+    const isCreateIntent = /\b(legg inn|legg til|opprett|registrer|lag|sett inn)\b/.test(qNorm);
+    const placeFilters = [
+      /\bparadis\b/.test(qNorm) ? "paradis" : null,
+      /\bfjord(glott)?\b/.test(qNorm) ? "fjordglott" : null,
+    ].filter(Boolean) as string[];
+    const timeRange = extractTimeRange(data.query, ctxYear);
+    const matchedNames = knownNames.filter((name) => fuzzyIncludes(qNorm, name));
+    const inferredNameWords = matchedNames.length
+      ? matchedNames
+      : queryWords.filter((word) => !QUERY_NON_ENTITY_WORDS.has(word) && !MONTHS[word]);
+    const hasEntityIntent = wantsCabin || wantsAvailability || timeRange || matchedNames.length > 0 || placeFilters.length > 0;
+
+    const retrieved = allEntries
+      .map((entry) => {
+        let score = 0;
+        if (inferredNameWords.length) {
+          const nameHits = inferredNameWords.filter((name) => fuzzyIncludes(entry.normalizedSearch, name)).length;
+          if (!nameHits) return null;
+          if (wantsCabin) {
+            const onlyMarkedUnavailable = inferredNameWords.some((name) => {
+              const n = stemNorwegianName(name);
+              return entry.normalizedSearch.includes(`${n} jobber`) && !new RegExp(`\\b${n}\\s+(m|med|familie)\\b`).test(entry.normalizedSearch);
+            });
+            if (onlyMarkedUnavailable) return null;
+          }
+          score += nameHits * 35;
+        }
+        if (wantsCabin) {
+          if (entry.category === "cabin") score += 30;
+          if (entry.normalizedCabins.length) score += 12;
+          if (entry.category !== "cabin" && !entry.normalizedCabins.length) return null;
+        }
+        if (placeFilters.length) {
+          const placeHit = placeFilters.some((place) => entry.normalizedCabins.some((c) => c.includes(place)) || entry.normalizedSearch.includes(place));
+          if (!placeHit) return null;
+          score += 28;
+        }
+        if (timeRange) {
+          if (!overlapsRange(entry, timeRange.start, timeRange.end)) return null;
+          score += 22;
+        }
+        for (const word of queryWords) {
+          if (fuzzyIncludes(entry.normalizedSearch, word)) score += 5;
+        }
+        if (wantsFuture && entry.end_date >= today) score += 8;
+        return score > 0 ? { entry, score } : null;
+      })
+      .filter((item): item is { entry: IndexedEntry; score: number } => Boolean(item))
+      .sort((a, b) => b.score - a.score || a.entry.start_date.localeCompare(b.entry.start_date));
+
+    const focusedMatches = retrieved
+      .filter((item) => !wantsFuture || item.entry.end_date >= today || retrieved.every((r) => r.entry.end_date < today))
+      .sort((a, b) => a.entry.start_date.localeCompare(b.entry.start_date))
+      .map((item) => item.entry);
+
+    const deterministicAnswer = hasEntityIntent && focusedMatches.length > 0 && !wantsAvailability && !isCreateIntent
+      ? {
+          intent: "answer" as const,
+          reply: buildDirectReply(focusedMatches, nowYear),
+          matched_ids: focusedMatches.map((e) => e.id),
+          suggestions: ["Vis flere hytteturer", "Hva skjer samme helg?", "Hvem er på hytta i sommer?"],
+        }
+      : null;
+
+    if (deterministicAnswer) return deterministicAnswer;
 
     const system = [
       "Du er en hjelpsom assistent for Hyttekalender – en norsk familiekalender.",
@@ -235,6 +489,10 @@ export const askAssistant = createServerFn({ method: "POST" })
       `- Aktive hyttesteder: ${(ctx.activeCabinLocations && ctx.activeCabinLocations.length ? ctx.activeCabinLocations.join(", ") : "alle")}.`,
       "",
       "BEGREPER: Kategorier = cabin (Hytte: Paradis/Fjordgløtt), event, highlight (inkl. bursdager), note, holiday (norske helligdager).",
+      "",
+      `FORHÅNDSHENTET RELEVANT KALENDERKONTEKST for dette spørsmålet (${focusedMatches.length} treff):`,
+      JSON.stringify(focusedMatches.slice(0, 40)),
+      "Bruk disse treffene først. De er allerede fuzzy-/semantisk rangert fra live kalenderdata.",
       "",
       "Tål skrivefeil, dialekt, små bokstaver, uformell norsk. Fuzzy-match på navn og steder ('morten' = 'Mortens familie', 'fjordglot' = 'Fjordgløtt').",
       "Norske månedsnavn og forkortelser. '12 til 15 juli' = 12–15 juli inneværende år.",
