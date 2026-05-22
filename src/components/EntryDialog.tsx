@@ -17,7 +17,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Calendar } from "@/components/ui/calendar";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 import {
   CATEGORY_META,
@@ -225,53 +225,43 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
             </div>
             <div className="rounded-2xl border border-border bg-card p-2">
               <div className="flex justify-center px-2 pt-1">
-                <Popover open={jumpOpen} onOpenChange={setJumpOpen}>
-                  <PopoverTrigger asChild>
-                    <button
-                      type="button"
-                      className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold capitalize text-foreground transition-colors hover:bg-secondary"
-                    >
-                      {format(calMonth, "LLLL yyyy", { locale: nb })}
-                      <ChevronDown className="h-4 w-4 opacity-60" />
-                    </button>
-                  </PopoverTrigger>
-                  <PopoverContent
-                    align="center"
-                    className="w-[min(92vw,22rem)] rounded-2xl border-border/60 bg-card/95 p-3 shadow-xl backdrop-blur"
-                  >
-                    <div className="mb-2 flex items-center justify-between px-1">
-                      <p className="text-sm font-semibold text-foreground">Hopp til måned</p>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setCalMonth(new Date());
-                          setJumpOpen(false);
-                        }}
-                        className="rounded-full bg-secondary px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-secondary/70"
-                      >
-                        I dag
-                      </button>
-                    </div>
-                    <MonthJumper
-                      monthDate={calMonth}
-                      onSelect={(d) => {
-                        setCalMonth(d);
-                        setJumpOpen(false);
-                      }}
-                    />
-                  </PopoverContent>
-                </Popover>
+                <button
+                  type="button"
+                  onClick={() => setMonthPicker((v) => !v)}
+                  className="inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-sm font-semibold capitalize text-foreground transition-colors hover:bg-secondary"
+                >
+                  {format(calMonth, "LLLL yyyy", { locale: nb })}
+                  <ChevronDown
+                    className={cn(
+                      "h-4 w-4 opacity-60 transition-transform",
+                      monthPicker && "rotate-180",
+                    )}
+                  />
+                </button>
               </div>
-              <Calendar
-                mode="range"
-                selected={range as any}
-                onSelect={(r: any) => setRange(r ?? undefined)}
-                month={calMonth}
-                onMonthChange={setCalMonth}
-                numberOfMonths={1}
-                locale={nb}
-                className={cn("p-2 pointer-events-auto mx-auto")}
-              />
+              {monthPicker ? (
+                <InlineMonthPicker
+                  value={calMonth}
+                  onSelect={(d) => {
+                    setCalMonth(d);
+                    setMonthPicker(false);
+                  }}
+                />
+              ) : (
+                <Calendar
+                  mode="range"
+                  selected={range as any}
+                  onSelect={(r: any) => setRange(r ?? undefined)}
+                  month={calMonth}
+                  onMonthChange={setCalMonth}
+                  numberOfMonths={1}
+                  locale={nb}
+                  startMonth={startOfMonth(today)}
+                  endMonth={maxDate}
+                  disabled={{ before: today, after: maxDate }}
+                  className={cn("p-2 pointer-events-auto mx-auto")}
+                />
+              )}
             </div>
           </div>
 
