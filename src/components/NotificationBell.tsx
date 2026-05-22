@@ -5,7 +5,6 @@ import { formatDistanceToNow } from "date-fns";
 import { nb } from "date-fns/locale";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import {
   describeActivity,
