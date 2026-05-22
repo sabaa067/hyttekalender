@@ -63,6 +63,39 @@ const MONTH_LABELS = [
   "desember",
 ];
 
+const QUERY_NON_ENTITY_WORDS = new Set([
+  "vis",
+  "finn",
+  "fortell",
+  "liste",
+  "list",
+  "alle",
+  "hytte",
+  "hytta",
+  "hytten",
+  "hyttetur",
+  "hytteturer",
+  "paradis",
+  "fjord",
+  "fjordglott",
+  "fri",
+  "ledig",
+  "ledige",
+  "sommer",
+  "januar",
+  "februar",
+  "mars",
+  "april",
+  "mai",
+  "juni",
+  "juli",
+  "august",
+  "september",
+  "oktober",
+  "november",
+  "desember",
+]);
+
 function normalizeText(value: string): string {
   return value
     .toLowerCase()
@@ -333,13 +366,16 @@ export const askAssistant = createServerFn({ method: "POST" })
     ].filter(Boolean) as string[];
     const timeRange = extractTimeRange(data.query, ctxYear);
     const matchedNames = knownNames.filter((name) => fuzzyIncludes(qNorm, name));
+    const inferredNameWords = matchedNames.length
+      ? matchedNames
+      : queryWords.filter((word) => !QUERY_NON_ENTITY_WORDS.has(word) && !MONTHS[word]);
     const hasEntityIntent = wantsCabin || wantsAvailability || timeRange || matchedNames.length > 0 || placeFilters.length > 0;
 
     const retrieved = allEntries
       .map((entry) => {
         let score = 0;
-        if (matchedNames.length) {
-          const nameHits = matchedNames.filter((name) => fuzzyIncludes(entry.normalizedSearch, name)).length;
+        if (inferredNameWords.length) {
+          const nameHits = inferredNameWords.filter((name) => fuzzyIncludes(entry.normalizedSearch, name)).length;
           if (!nameHits) return null;
           score += nameHits * 35;
         }
