@@ -214,7 +214,10 @@ function Index() {
         }}
       />
 
-      <div className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 pt-6 sm:gap-6 sm:pt-10">
+      <div
+        className="mx-auto flex max-w-6xl flex-col gap-5 px-4 pb-32 sm:gap-6 sm:pt-10"
+        style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 4rem)" }}
+      >
         <header className="flex flex-col items-center gap-4 text-center">
           <ProfileChip />
           <h1 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
