@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { loginWithPassword } from "./auth.functions";
 
 export type AppUser = {
   id: string;
@@ -34,14 +34,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (password: string) => {
     const pw = password.trim();
     if (!pw) throw new Error("Skriv inn et passord");
-    const { data, error } = await supabase
-      .from("app_users")
-      .select("id,name,role")
-      .eq("password", pw)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!data) throw new Error("Feil passord");
-    const u: AppUser = { id: data.id, name: data.name, role: data.role as "admin" | "viewer" };
+    const u = (await loginWithPassword({ data: { password: pw } })) as AppUser;
     localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
     setUser(u);
     return u;
