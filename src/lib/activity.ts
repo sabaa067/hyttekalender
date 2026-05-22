@@ -1,7 +1,13 @@
-import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { nb } from "date-fns/locale";
 import { parseISODate } from "./entries";
+import { getStoredToken } from "./auth";
+import {
+  logActivityFn,
+  fetchActivityFn,
+  fetchLastReadFn,
+  markReadFn,
+} from "./activity.functions";
 
 export type ActivityAction = "create" | "update" | "delete";
 
@@ -23,48 +29,55 @@ export async function logActivity(input: {
   entry: { title: string; category?: string | null; start_date?: string | null; end_date?: string | null };
 }) {
   if (!input.actor) return;
-  const { error } = await supabase.from("activity_log").insert({
-    actor_id: input.actor.id,
-    actor_name: input.actor.name,
-    action: input.action,
-    entry_title: input.entry.title,
-    entry_category: input.entry.category ?? null,
-    start_date: input.entry.start_date ?? null,
-    end_date: input.entry.end_date ?? null,
-  });
-  if (error) console.error("[activity] log failed", error);
+  const token = getStoredToken();
+  if (!token) return;
+  try {
+    await logActivityFn({
+      data: {
+        token,
+        action: input.action,
+        entry: {
+          title: input.entry.title,
+          category: input.entry.category ?? null,
+          start_date: input.entry.start_date ?? null,
+          end_date: input.entry.end_date ?? null,
+        },
+      },
+    });
+  } catch (err) {
+    console.error("[activity] log failed", err);
+  }
 }
 
 export async function fetchActivity(limit = 100): Promise<ActivityRow[]> {
-  const { data, error } = await supabase
-    .from("activity_log")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .limit(limit);
-  if (error) throw new Error(error.message);
-  return (data ?? []) as ActivityRow[];
+  const token = getStoredToken();
+  if (!token) return [];
+  const rows = (await fetchActivityFn({ data: { token, limit } })) as ActivityRow[];
+  return rows;
 }
 
-export async function fetchLastRead(userId: string): Promise<string | null> {
-  const { data, error } = await supabase
-    .from("activity_reads")
-    .select("last_read_at")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (error) {
-    console.error("[activity] fetchLastRead", error);
+export async function fetchLastRead(_userId: string): Promise<string | null> {
+  const token = getStoredToken();
+  if (!token) return null;
+  try {
+    const res = (await fetchLastReadFn({ data: { token } })) as { last_read_at: string | null };
+    return res.last_read_at;
+  } catch (err) {
+    console.error("[activity] fetchLastRead", err);
     return null;
   }
-  return data?.last_read_at ?? null;
 }
 
-export async function markRead(userId: string) {
-  const now = new Date().toISOString();
-  const { error } = await supabase
-    .from("activity_reads")
-    .upsert({ user_id: userId, last_read_at: now }, { onConflict: "user_id" });
-  if (error) console.error("[activity] markRead", error);
-  return now;
+export async function markRead(_userId: string) {
+  const token = getStoredToken();
+  if (!token) return new Date().toISOString();
+  try {
+    const res = (await markReadFn({ data: { token } })) as { now: string };
+    return res.now;
+  } catch (err) {
+    console.error("[activity] markRead", err);
+    return new Date().toISOString();
+  }
 }
 
 const VERB: Record<ActivityAction, string> = {

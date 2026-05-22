@@ -1,5 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { detectCabinLocations, primaryCabinLocation, type CabinLocation, type Category } from "./categories";
+import { getStoredToken } from "./auth";
+import { createEntryFn, updateEntryFn, deleteEntryFn } from "./entries.functions";
 
 // Categories persisted in the DB (holiday is virtual, generated client-side).
 type DBCategory = Exclude<Category, "holiday">;
@@ -72,29 +74,44 @@ export async function createEntry(input: {
   end_date: string;
   description?: string | null;
 }): Promise<CalendarEntry> {
-  const { data, error } = await supabase
-    .from("calendar_entries")
-    .insert(input as { category: DBCategory; title: string; start_date: string; end_date: string; description?: string | null })
-    .select()
-    .single();
-  if (error) throw new Error(error.message);
-  return data as CalendarEntry;
+  const token = getStoredToken();
+  if (!token) throw new Error("Ikke innlogget");
+  if (input.category === "holiday") throw new Error("Kan ikke lagre helligdager");
+  const row = (await createEntryFn({
+    data: {
+      token,
+      title: input.title,
+      category: input.category as DBCategory,
+      start_date: input.start_date,
+      end_date: input.end_date,
+      description: input.description ?? null,
+    },
+  })) as CalendarEntry;
+  return row;
 }
 
 export async function updateEntry(
   id: string,
   patch: Partial<Omit<CalendarEntry, "id" | "created_at" | "updated_at">>,
 ): Promise<void> {
-  const { error } = await supabase
-    .from("calendar_entries")
-    .update(patch as Partial<{ category: DBCategory; title: string; start_date: string; end_date: string; description: string | null }>)
-    .eq("id", id);
-  if (error) throw new Error(error.message);
+  const token = getStoredToken();
+  if (!token) throw new Error("Ikke innlogget");
+  const safePatch: Record<string, unknown> = {};
+  if (patch.title !== undefined) safePatch.title = patch.title;
+  if (patch.category !== undefined) {
+    if (patch.category === "holiday") throw new Error("Ugyldig kategori");
+    safePatch.category = patch.category;
+  }
+  if (patch.start_date !== undefined) safePatch.start_date = patch.start_date;
+  if (patch.end_date !== undefined) safePatch.end_date = patch.end_date;
+  if (patch.description !== undefined) safePatch.description = patch.description;
+  await updateEntryFn({ data: { token, id, patch: safePatch as never } });
 }
 
 export async function deleteEntry(id: string): Promise<void> {
-  const { error } = await supabase.from("calendar_entries").delete().eq("id", id);
-  if (error) throw new Error(error.message);
+  const token = getStoredToken();
+  if (!token) throw new Error("Ikke innlogget");
+  await deleteEntryFn({ data: { token, id } });
 }
 
 export function toISODate(d: Date): string {
