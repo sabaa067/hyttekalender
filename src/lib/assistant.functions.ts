@@ -194,7 +194,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const fallback = {
       intent: "answer" as const,
       reply:
-        "Fant ingen treff. Prøv et av forslagene under.",
+        "Jeg klarte ikke hente et trygt svar akkurat nå. Prøv igjen om litt.",
       suggestions: [
         "Hva skjer 17. mai?",
         "Når er Mortens familie på Paradis?",
@@ -320,6 +320,64 @@ export const askAssistant = createServerFn({ method: "POST" })
       .sort((a, b) => b[1] - a[1])
       .slice(0, 60)
       .map(([n]) => n);
+
+    const qNorm = normalizeText(data.query);
+    const queryWords = qNorm.split(/\s+/).filter((w) => w.length >= 3 && !STOPWORDS.has(w));
+    const wantsCabin = /\b(hytte|hytta|hytten|hyttetur|hytteturer|paradis|fjordglott|fjord)\b/.test(qNorm);
+    const wantsAvailability = /\b(fri|ledig|ledige|aapen|apen|available)\b/.test(qNorm);
+    const wantsFuture = /\b(nar|skal|kommer|reiser|drar|neste|fremover|framtid|future)\b/.test(qNorm);
+    const placeFilters = [
+      /\bparadis\b/.test(qNorm) ? "paradis" : null,
+      /\bfjord(glott)?\b/.test(qNorm) ? "fjordglott" : null,
+    ].filter(Boolean) as string[];
+    const timeRange = extractTimeRange(data.query, ctxYear);
+    const matchedNames = knownNames.filter((name) => fuzzyIncludes(qNorm, name));
+    const hasEntityIntent = wantsCabin || wantsAvailability || timeRange || matchedNames.length > 0 || placeFilters.length > 0;
+
+    const retrieved = allEntries
+      .map((entry) => {
+        let score = 0;
+        if (matchedNames.length) {
+          const nameHits = matchedNames.filter((name) => fuzzyIncludes(entry.normalizedSearch, name)).length;
+          if (!nameHits) return null;
+          score += nameHits * 35;
+        }
+        if (wantsCabin) {
+          if (entry.category === "cabin") score += 30;
+          if (entry.normalizedCabins.length) score += 12;
+          if (entry.category !== "cabin" && !entry.normalizedCabins.length) return null;
+        }
+        if (placeFilters.length) {
+          const placeHit = placeFilters.some((place) => entry.normalizedCabins.some((c) => c.includes(place)) || entry.normalizedSearch.includes(place));
+          if (!placeHit) return null;
+          score += 28;
+        }
+        if (timeRange) {
+          if (!overlapsRange(entry, timeRange.start, timeRange.end)) return null;
+          score += 22;
+        }
+        for (const word of queryWords) {
+          if (fuzzyIncludes(entry.normalizedSearch, word)) score += 5;
+        }
+        if (wantsFuture && entry.end_date >= today) score += 8;
+        return score > 0 ? { entry, score } : null;
+      })
+      .filter((item): item is { entry: IndexedEntry; score: number } => Boolean(item))
+      .sort((a, b) => b.score - a.score || a.entry.start_date.localeCompare(b.entry.start_date));
+
+    const focusedMatches = retrieved
+      .filter((item) => !wantsFuture || item.entry.end_date >= today || retrieved.every((r) => r.entry.end_date < today))
+      .sort((a, b) => a.entry.start_date.localeCompare(b.entry.start_date))
+      .map((item) => item.entry);
+
+    const deterministicAnswer = hasEntityIntent && focusedMatches.length > 0 && !wantsAvailability
+      ? {
+          intent: "answer" as const,
+          reply: buildDirectReply(focusedMatches, nowYear),
+          matched_ids: focusedMatches.map((e) => e.id),
+          suggestions: ["Vis flere hytteturer", "Hva skjer samme helg?", "Hvem er på hytta i sommer?"],
+        }
+      : null;
 
     const system = [
       "Du er en hjelpsom assistent for Hyttekalender – en norsk familiekalender.",
