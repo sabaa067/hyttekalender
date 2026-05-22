@@ -111,7 +111,7 @@ export function NotificationBell({ onOpenHistory }: Props) {
         align="end"
         sideOffset={12}
         collisionPadding={{ top: 16, right: 12, bottom: 12, left: 12 }}
-        className="w-80 rounded-2xl px-2 pb-2 pt-[calc(env(safe-area-inset-top,0px)+0.5rem)] sm:pt-2"
+        className="w-80 rounded-2xl px-2 pb-2 pt-[calc(env(safe-area-inset-top,0px)_+_0.5rem)] sm:pt-2"
       >
         <div className="px-2 py-1.5">
           <p className="text-sm font-semibold text-foreground">Siste hendelser</p>
