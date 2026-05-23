@@ -188,8 +188,6 @@ function Index() {
         view === "modern" ? "bg-secondary/40" : "bg-background",
       )}
     >
-      <AppMenu onOpenHistory={() => setHistoryOpen(true)} />
-
       {/* Sticky compact top bar */}
       <div
         className="sticky top-0 z-30 border-b border-border/40 bg-background/85 backdrop-blur-xl"
