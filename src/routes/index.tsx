@@ -348,7 +348,7 @@ function Index() {
           />
         )}
         {view === "excel" && (
-          <PinchZoomContainer className="rounded-2xl">
+          <PinchZoomContainer>
             <ExcelView
               year={year}
               entries={allEntries}
