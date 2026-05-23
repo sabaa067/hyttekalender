@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { Menu, LogIn, LogOut, History, User as UserIcon, Fingerprint } from "lucide-react";
+import { CATEGORY_META, CABIN_LOCATION_META } from "@/lib/categories";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/lib/auth";
 import {
   disableBiometric,
@@ -61,10 +63,9 @@ export function AppMenu({ onOpenHistory }: Props) {
         <button
           type="button"
           aria-label="Meny"
-          className="fixed left-3 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/60 bg-card/80 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary sm:left-4"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-card/70 text-foreground transition-colors hover:bg-secondary"
         >
-          <Menu className="h-5 w-5" />
+          <Menu className="h-[18px] w-[18px]" />
         </button>
       </SheetTrigger>
       <SheetContent side="left" className="w-80 pt-[calc(env(safe-area-inset-top,0px)_+_2.25rem)] sm:w-96 sm:pt-6">
@@ -130,6 +131,27 @@ export function AppMenu({ onOpenHistory }: Props) {
             />
           )}
         </nav>
+
+        <div className="mt-6 rounded-2xl border border-border/50 bg-secondary/40 p-3">
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Fargeguide
+          </p>
+          <ul className="grid grid-cols-1 gap-1.5">
+            {[
+              { label: `Hytte · ${CABIN_LOCATION_META.paradis.label}`, color: "bg-cabin-paradis" },
+              { label: `Hytte · ${CABIN_LOCATION_META.fjord.label}`, color: "bg-cabin-fjord" },
+              { label: "Arrangement", color: CATEGORY_META.event.dot },
+              { label: "Høydepunkt", color: CATEGORY_META.highlight.dot },
+              { label: "Notat", color: CATEGORY_META.note.dot },
+              { label: "Høytid", color: CATEGORY_META.holiday.dot },
+            ].map((it) => (
+              <li key={it.label} className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className={cn("h-3 w-3 shrink-0 rounded-sm", it.color)} />
+                <span className="truncate">{it.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       </SheetContent>
     </Sheet>
   );
