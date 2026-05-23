@@ -81,12 +81,11 @@ export function NotificationBell({ onOpenHistory }: Props) {
         <button
           type="button"
           aria-label="Varsler"
-          className="fixed right-3 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/60 bg-card/80 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary sm:right-4"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+          className="relative flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-card/70 text-foreground transition-colors hover:bg-secondary"
         >
-          <Bell className="h-5 w-5" />
+          <Bell className="h-[18px] w-[18px]" />
           {unreadCount > 0 && (
-            <span className="absolute right-1.5 top-1.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white shadow">
+            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold leading-none text-white shadow">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}

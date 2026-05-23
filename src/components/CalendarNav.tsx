@@ -38,22 +38,22 @@ export function CalendarNav({
       : String(year);
 
   return (
-    <div className="flex items-center justify-between gap-2 rounded-3xl bg-card p-2 shadow-sm sm:p-3">
+    <div className="flex items-center justify-between gap-1 rounded-2xl border border-border/40 bg-card/80 p-1.5 sm:p-2">
       <Button
         variant="ghost"
-        size="lg"
+        size="sm"
         onClick={onPrev}
         aria-label="Forrige"
-        className="h-14 w-14 rounded-2xl"
+        className="h-10 w-10 rounded-xl"
       >
-        <ChevronLeft className="!h-7 !w-7" />
+        <ChevronLeft className="!h-5 !w-5" />
       </Button>
 
       <Popover>
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="flex-1 rounded-2xl py-3 text-center text-xl font-semibold capitalize text-foreground transition-colors hover:bg-secondary sm:text-2xl"
+            className="flex-1 rounded-xl py-2 text-center text-base font-semibold capitalize text-foreground transition-colors hover:bg-secondary sm:text-lg"
           >
             {label}
           </button>
@@ -84,12 +84,12 @@ export function CalendarNav({
 
       <Button
         variant="ghost"
-        size="lg"
+        size="sm"
         onClick={onNext}
         aria-label="Neste"
-        className="h-14 w-14 rounded-2xl"
+        className="h-10 w-10 rounded-xl"
       >
-        <ChevronRight className="!h-7 !w-7" />
+        <ChevronRight className="!h-5 !w-5" />
       </Button>
     </div>
   );
