@@ -1,4 +1,9 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
+import {
+  TransformWrapper,
+  TransformComponent,
+  useControls,
+} from "react-zoom-pan-pinch";
 import { Minimize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -10,15 +15,72 @@ type Props = {
 };
 
 /**
- * Isolated pinch-zoom + pan container. Touch-only (mobile/tablet).
- * Desktop behavior is unchanged — content renders normally.
+ * Pinch-zoom + pan container powered by react-zoom-pan-pinch.
+ * Isolated to the wrapped subtree — page chrome is unaffected.
+ * Supports pinch, two-finger pan, single-finger pan when zoomed,
+ * double-tap to zoom in, and a reset button.
  */
+function ResetButton({ visible }: { visible: boolean }) {
+  const { resetTransform } = useControls();
+  if (!visible) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => resetTransform()}
+      className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-foreground/90 px-3 py-1.5 text-xs font-medium text-background shadow-lg backdrop-blur hover:bg-foreground"
+    >
+      <Minimize2 className="h-3.5 w-3.5" />
+      Tilbakestill zoom
+    </button>
+  );
+}
+
 export function PinchZoomContainer({
   children,
   minScale = 1,
-  maxScale = 3,
+  maxScale = 4,
   className,
 }: Props) {
+  const [zoomed, setZoomed] = useState(false);
+
+  return (
+    <div
+      className={cn("relative overflow-hidden", className)}
+      style={{ touchAction: "none" }}
+    >
+      <TransformWrapper
+        initialScale={1}
+        minScale={minScale}
+        maxScale={maxScale}
+        limitToBounds={true}
+        centerOnInit={false}
+        smooth
+        wheel={{ step: 0.1, smoothStep: 0.005 }}
+        pinch={{ step: 5, disabled: false }}
+        doubleClick={{ mode: "toggle", step: 1.5, animationTime: 200 }}
+        panning={{
+          velocityDisabled: false,
+          // Allow single-finger pan only when zoomed in so the page
+          // remains scrollable at scale = 1.
+          disabled: false,
+          excluded: [],
+        }}
+        onTransformed={(_, state) => {
+          const isZoomed = state.scale > 1.01;
+          setZoomed((prev) => (prev === isZoomed ? prev : isZoomed));
+        }}
+      >
+        <TransformComponent
+          wrapperStyle={{ width: "100%", height: "100%" }}
+          contentStyle={{ width: "100%" }}
+        >
+          {children}
+        </TransformComponent>
+        <ResetButton visible={zoomed} />
+      </TransformWrapper>
+    </div>
+  );
+}
   const viewportRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
