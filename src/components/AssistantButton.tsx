@@ -40,10 +40,9 @@ export function AssistantButton({
         <button
           type="button"
           aria-label="AI-assistent"
-          className="fixed right-16 z-40 flex h-11 w-11 items-center justify-center rounded-2xl border border-border/60 bg-card/80 text-foreground shadow-sm backdrop-blur transition-colors hover:bg-secondary sm:right-[4.5rem]"
-          style={{ top: "calc(env(safe-area-inset-top, 0px) + 0.75rem)" }}
+          className="flex h-10 w-10 items-center justify-center rounded-xl border border-border/60 bg-card/70 text-foreground transition-colors hover:bg-secondary"
         >
-          <Sparkles className="h-5 w-5" />
+          <Sparkles className="h-[18px] w-[18px]" />
         </button>
       </DialogTrigger>
       <DialogContent
