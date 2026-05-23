@@ -47,7 +47,8 @@ export function PinchZoomContainer({
     el.style.transition = animate ? "transform 240ms ease-out" : "none";
     el.style.transform = `translate3d(${tx}px, ${ty}px, 0) scale(${scale})`;
     el.style.transformOrigin = "0 0";
-    setZoomed(scale > 1.01);
+    const isZoomed = scale > 1.01;
+    setZoomed((prev) => (prev === isZoomed ? prev : isZoomed));
   };
 
   const clamp = () => {
@@ -153,8 +154,8 @@ export function PinchZoomContainer({
   return (
     <div
       ref={viewportRef}
-      className={cn("relative touch-pan-y overflow-hidden", className)}
-      style={{ touchAction: "pan-x pan-y" }}
+      className={cn("relative overflow-hidden", className)}
+      style={{ touchAction: "pan-x pan-y", WebkitOverflowScrolling: "touch" }}
     >
       <div ref={contentRef} className="will-change-transform">
         {children}
