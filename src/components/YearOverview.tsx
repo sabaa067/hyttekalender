@@ -29,7 +29,7 @@ export function YearOverview({ year, entries, filters, cabinLocations, onDayClic
     (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
   );
   return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }, (_, m) => (
         <MiniMonth
           key={m}
@@ -61,8 +61,8 @@ function MiniMonth({
   const todayISO = toISODate(new Date());
 
   return (
-    <div className="rounded-2xl bg-card p-3 shadow-sm">
-      <h3 className="mb-2 text-center text-base font-semibold text-foreground">
+    <div className="rounded-2xl border border-border/40 bg-card/80 p-3">
+      <h3 className="mb-2 text-center text-sm font-semibold tracking-tight text-foreground">
         {MONTH_NAMES[month]}
       </h3>
       <div className="mb-1 grid grid-cols-7 gap-0.5">
