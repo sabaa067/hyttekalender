@@ -54,7 +54,7 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
   const todayISO = toISODate(new Date());
 
   return (
-    <table className="border-collapse bg-card text-sm select-none" style={{ tableLayout: "fixed" }}>
+    <table className="border-collapse bg-card text-sm select-none">
         <thead className="bg-card">
           <tr>
             <th className="sticky left-0 z-20 w-12 border-b border-r border-border bg-card px-2 py-2 text-center text-xs font-semibold text-muted-foreground">
