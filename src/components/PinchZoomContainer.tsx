@@ -68,7 +68,7 @@ export function PinchZoomContainer({
         limitToBounds={false}
         centerOnInit
         smooth
-        wheel={{ step: 0.12, smoothStep: 0.008 }}
+        wheel={{ step: 0.12 }}
         pinch={{ step: 6 }}
         doubleClick={{ mode: "toggle", step: 1.6, animationTime: 220 }}
         panning={{
@@ -76,7 +76,7 @@ export function PinchZoomContainer({
           allowLeftClickPan: true,
           excluded: ["input", "textarea"],
         }}
-        velocityAnimation={{ sensitivity: 1, animationTime: 400 }}
+        velocityAnimation={{ sensitivityTouch: 1, animationTime: 400 }}
       >
         <TransformComponent
           wrapperStyle={{ width: "100%", height: "100%" }}
