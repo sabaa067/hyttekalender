@@ -4,7 +4,7 @@ import {
   TransformComponent,
   useControls,
 } from "react-zoom-pan-pinch";
-import { Minimize2 } from "lucide-react";
+import { Minus, Plus, Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type Props = {
@@ -14,62 +14,77 @@ type Props = {
   className?: string;
 };
 
-function ResetButton({ visible }: { visible: boolean }) {
-  const { resetTransform } = useControls();
-  if (!visible) return null;
+function ZoomControls() {
+  const { zoomIn, zoomOut, resetTransform } = useControls();
+  const btn =
+    "flex h-9 w-9 items-center justify-center rounded-full bg-foreground/85 text-background shadow-lg backdrop-blur transition hover:bg-foreground active:scale-95";
   return (
-    <button
-      type="button"
-      onClick={() => resetTransform()}
-      className="absolute bottom-3 right-3 z-20 flex items-center gap-1.5 rounded-full bg-foreground/90 px-3 py-1.5 text-xs font-medium text-background shadow-lg backdrop-blur hover:bg-foreground"
-    >
-      <Minimize2 className="h-3.5 w-3.5" />
-      Tilbakestill zoom
-    </button>
+    <div className="pointer-events-auto absolute bottom-3 right-3 z-20 flex flex-col gap-2">
+      <button type="button" aria-label="Zoom inn" className={btn} onClick={() => zoomIn(0.4)}>
+        <Plus className="h-4 w-4" />
+      </button>
+      <button type="button" aria-label="Zoom ut" className={btn} onClick={() => zoomOut(0.4)}>
+        <Minus className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        aria-label="Tilbakestill"
+        className={btn}
+        onClick={() => resetTransform()}
+      >
+        <Maximize2 className="h-4 w-4" />
+      </button>
+    </div>
   );
 }
 
 /**
- * Pinch-zoom + pan container powered by react-zoom-pan-pinch.
- * Isolated to its subtree — the rest of the page is unaffected.
- * Supports pinch zoom, pan when zoomed, double-tap to zoom, and reset.
+ * Dedicated spreadsheet viewport: fixed-height window that pans and zooms
+ * its children freely (no bounds), much like Google Sheets mobile.
+ *
+ * - Pinch to zoom, double-tap to zoom, drag/pan with one finger at any zoom
+ * - Zooms out below 1× to fit wide content on small screens
+ * - Touch action locked so only the viewport reacts, never the page
  */
 export function PinchZoomContainer({
   children,
-  minScale = 1,
-  maxScale = 4,
+  minScale = 0.35,
+  maxScale = 5,
   className,
 }: Props) {
-  const [zoomed, setZoomed] = useState(false);
-
   return (
     <div
-      className={cn("relative overflow-hidden", className)}
+      className={cn(
+        "relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm",
+        "h-[70vh] sm:h-[78vh]",
+        className,
+      )}
       style={{ touchAction: "none", overscrollBehavior: "contain" }}
     >
       <TransformWrapper
         initialScale={1}
         minScale={minScale}
         maxScale={maxScale}
-        limitToBounds
-        centerOnInit={false}
+        limitToBounds={false}
+        centerOnInit
         smooth
-        wheel={{ step: 0.1, smoothStep: 0.005 }}
-        pinch={{ step: 5 }}
-        doubleClick={{ mode: "toggle", step: 1.5, animationTime: 200 }}
-        panning={{ velocityDisabled: false }}
-        onTransformed={(_, state) => {
-          const isZoomed = state.scale > 1.01;
-          setZoomed((prev) => (prev === isZoomed ? prev : isZoomed));
+        wheel={{ step: 0.12, smoothStep: 0.008 }}
+        pinch={{ step: 6 }}
+        doubleClick={{ mode: "toggle", step: 1.6, animationTime: 220 }}
+        panning={{
+          velocityDisabled: false,
+          allowLeftClickPan: true,
+          excluded: ["input", "textarea"],
         }}
+        velocityAnimation={{ sensitivity: 1, animationTime: 400 }}
       >
         <TransformComponent
           wrapperStyle={{ width: "100%", height: "100%" }}
-          contentStyle={{ width: "100%" }}
+          contentStyle={{ display: "inline-block" }}
         >
           {children}
         </TransformComponent>
-        <ResetButton visible={zoomed} />
+        <ZoomControls />
       </TransformWrapper>
     </div>
   );
