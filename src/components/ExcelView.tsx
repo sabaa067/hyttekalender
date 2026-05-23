@@ -4,7 +4,6 @@ import { Cake } from "lucide-react";
 import {
   type CalendarEntry,
   toISODate,
-  entryCoversDate,
   entryMatchesFilters,
   entryMatchesCabinLocations,
   type FilterKey,
@@ -33,6 +32,24 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
       ),
     [entries, filters, cabinLocations],
   );
+
+  const byDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const e of visible) {
+      const [sy, sm, sd] = e.start_date.split("-").map(Number);
+      const [ey, em, ed] = e.end_date.split("-").map(Number);
+      const cur = new Date(sy, sm - 1, sd);
+      const last = new Date(ey, em - 1, ed);
+      while (cur.getTime() <= last.getTime()) {
+        const iso = toISODate(cur);
+        const arr = map.get(iso);
+        if (arr) arr.push(e);
+        else map.set(iso, [e]);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return map;
+  }, [visible]);
 
   const todayISO = toISODate(new Date());
 
@@ -74,7 +91,7 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
                   }
                   const date = new Date(year, mIdx, day);
                   const iso = toISODate(date);
-                  const dayEntries = visible.filter((e) => entryCoversDate(e, iso));
+                  const dayEntries = byDate.get(iso) ?? [];
                   const isToday = iso === todayISO;
                   const weekday = date.getDay(); // 0=Sun,6=Sat
                   const isWeekend = weekday === 0 || weekday === 6;
