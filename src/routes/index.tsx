@@ -466,7 +466,7 @@ function ToggleBtn({
       type="button"
       onClick={onClick}
       className={cn(
-        "flex items-center gap-2 rounded-full px-5 py-2.5 text-base font-medium transition-all",
+        "flex flex-1 items-center justify-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-all sm:text-sm",
         active
           ? "bg-foreground text-background shadow-sm"
           : "text-muted-foreground hover:text-foreground",
