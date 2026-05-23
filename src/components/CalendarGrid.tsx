@@ -4,7 +4,6 @@ import { cn } from "@/lib/utils";
 import {
   type CalendarEntry,
   toISODate,
-  entryCoversDate,
   entryMatchesFilters,
   entryMatchesCabinLocations,
   type FilterKey,
@@ -36,12 +35,36 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
     });
   }, [monthDate]);
 
-  const todayISO = toISODate(new Date());
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
-  const visible = entries.filter(
-    (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
+  const todayISO = useMemo(() => toISODate(new Date()), []);
+  const visible = useMemo(
+    () =>
+      entries.filter(
+        (e) =>
+          entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
+      ),
+    [entries, filters, cabinLocations],
   );
+  // Bucket entries by every ISO date they cover — single O(N*span) pass.
+  const byDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const e of visible) {
+      const s = e.start_date;
+      const end = e.end_date;
+      // Iterate the inclusive date range using string math is unsafe; use Date.
+      const [sy, sm, sd] = s.split("-").map(Number);
+      const [ey, em, ed] = end.split("-").map(Number);
+      const cur = new Date(sy, sm - 1, sd);
+      const last = new Date(ey, em - 1, ed);
+      while (cur.getTime() <= last.getTime()) {
+        const iso = toISODate(cur);
+        const arr = map.get(iso);
+        if (arr) arr.push(e);
+        else map.set(iso, [e]);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return map;
+  }, [visible]);
 
   return (
     <div className="rounded-3xl bg-card p-3 shadow-sm sm:p-5">
@@ -58,9 +81,9 @@ export function CalendarGrid({ monthDate, entries, filters, cabinLocations, onDa
       <div className="grid grid-cols-7 gap-1 sm:gap-2">
         {cells.map(({ date, inMonth }, idx) => {
           const iso = toISODate(date);
-          const dayEntries = visible.filter((e) => entryCoversDate(e, iso));
+          const dayEntries = byDate.get(iso) ?? [];
           const isToday = iso === todayISO;
-          const isPast = date.getTime() < todayStart.getTime();
+          const isPast = iso < todayISO;
 
           return (
             <button

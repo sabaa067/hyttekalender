@@ -3,7 +3,6 @@ import { cn } from "@/lib/utils";
 import {
   type CalendarEntry,
   toISODate,
-  entryCoversDate,
   entryMatchesFilters,
   entryMatchesCabinLocations,
   type FilterKey,
@@ -25,9 +24,32 @@ type Props = {
 };
 
 export function YearOverview({ year, entries, filters, cabinLocations, onDayClick }: Props) {
-  const visible = entries.filter(
-    (e) => entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
+  const visible = useMemo(
+    () =>
+      entries.filter(
+        (e) =>
+          entryMatchesFilters(e, filters) && entryMatchesCabinLocations(e, cabinLocations),
+      ),
+    [entries, filters, cabinLocations],
   );
+  // Single-pass bucket by ISO date for the whole year.
+  const byDate = useMemo(() => {
+    const map = new Map<string, CalendarEntry[]>();
+    for (const e of visible) {
+      const [sy, sm, sd] = e.start_date.split("-").map(Number);
+      const [ey, em, ed] = e.end_date.split("-").map(Number);
+      const cur = new Date(sy, sm - 1, sd);
+      const last = new Date(ey, em - 1, ed);
+      while (cur.getTime() <= last.getTime()) {
+        const iso = toISODate(cur);
+        const arr = map.get(iso);
+        if (arr) arr.push(e);
+        else map.set(iso, [e]);
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+    return map;
+  }, [visible]);
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }, (_, m) => (
@@ -35,7 +57,7 @@ export function YearOverview({ year, entries, filters, cabinLocations, onDayClic
           key={m}
           year={year}
           month={m}
-          entries={visible}
+          byDate={byDate}
           onDayClick={onDayClick}
         />
       ))}
@@ -44,8 +66,8 @@ export function YearOverview({ year, entries, filters, cabinLocations, onDayClic
 }
 
 function MiniMonth({
-  year, month, entries, onDayClick,
-}: { year: number; month: number; entries: CalendarEntry[]; onDayClick: (d: Date) => void }) {
+  year, month, byDate, onDayClick,
+}: { year: number; month: number; byDate: Map<string, CalendarEntry[]>; onDayClick: (d: Date) => void }) {
   const cells = useMemo(() => {
     const first = new Date(year, month, 1);
     const offset = (first.getDay() + 6) % 7;
@@ -75,7 +97,7 @@ function MiniMonth({
       <div className="grid grid-cols-7 gap-0.5">
         {cells.map(({ date, inMonth }, idx) => {
           const iso = toISODate(date);
-          const dayEntries = entries.filter((e) => entryCoversDate(e, iso));
+          const dayEntries = byDate.get(iso) ?? [];
           const primary = dayEntries[0];
           const v = primary ? getEntryVisual(primary) : null;
           const isToday = iso === todayISO;
