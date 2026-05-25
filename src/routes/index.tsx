@@ -167,6 +167,22 @@ function Index() {
     return next as Set<FilterKey>;
   }, [filters, showHolidays]);
 
+  // Temporary debug logging — visible in the browser console — to verify
+  // that the active filter set and entry counts line up. Helps catch any
+  // future regression where a single category silently dominates.
+  if (typeof window !== "undefined" && import.meta.env.DEV) {
+    const byCat = allEntries.reduce<Record<string, number>>((acc, e) => {
+      acc[e.category] = (acc[e.category] ?? 0) + 1;
+      return acc;
+    }, {});
+    // eslint-disable-next-line no-console
+    console.debug("[hk] filters", {
+      active: Array.from(effectiveFilters),
+      showHolidays,
+      totals: byCat,
+    });
+  }
+
   const goPrev = () => {
     if (view === "modern") {
       setMonthDate(new Date(monthDate.getFullYear(), monthDate.getMonth() - 1, 1));
