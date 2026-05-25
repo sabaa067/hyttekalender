@@ -1,4 +1,4 @@
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Cake } from "lucide-react";
 import { type CalendarEntry, toISODate, type FilterKey } from "@/lib/entries";
@@ -11,10 +11,10 @@ import {
 } from "@/lib/categories";
 
 const MONTHS_SHORT = [
-  "Jan", "Feb", "Mar", "Apr", "Mai", "Jun",
-  "Jul", "Aug", "Sep", "Okt", "Nov", "Des",
+  "jan", "feb", "mar", "apr", "mai", "jun",
+  "jul", "aug", "sep", "okt", "nov", "des",
 ];
-const WEEKDAYS_SHORT = ["S", "M", "T", "O", "T", "F", "L"]; // JS getDay: 0=Sun..6=Sat
+const WEEKDAYS_SHORT = ["sø", "ma", "ti", "on", "to", "fr", "lø"];
 
 type Props = {
   year: number;
@@ -25,9 +25,9 @@ type Props = {
   onEntryClick?: (entry: CalendarEntry) => void;
 };
 
-type RowKey = FilterKey;
+type ColKey = FilterKey;
 
-const ROW_DEFS: { key: RowKey; label: string; color: string; soft: string }[] = [
+const COL_DEFS: { key: ColKey; label: string; color: string; soft: string }[] = [
   {
     key: "paradis",
     label: "Paradis",
@@ -66,7 +66,7 @@ const ROW_DEFS: { key: RowKey; label: string; color: string; soft: string }[] = 
   },
 ];
 
-function entryInRow(e: CalendarEntry, key: RowKey): boolean {
+function entryInCol(e: CalendarEntry, key: ColKey): boolean {
   if (key === "paradis" || key === "fjord") {
     if (e.category !== "cabin") return false;
     const loc = primaryCabinLocation(`${e.title} ${e.description ?? ""}`);
@@ -78,285 +78,178 @@ function entryInRow(e: CalendarEntry, key: RowKey): boolean {
   return e.category === key;
 }
 
-type Interval = { entry: CalendarEntry; start: number; end: number };
+const DATE_COL_W = 96;
+const CAT_COL_W = 120;
+const ROW_H = 30;
 
-function dayIndex(year: number, iso: string): number {
-  const [y, m, d] = iso.split("-").map(Number);
-  const start = new Date(year, 0, 1).getTime();
-  const t = new Date(y, m - 1, d).getTime();
-  return Math.round((t - start) / 86400000);
-}
-
-function assignLanes(intervals: Interval[]): Interval[][] {
-  const sorted = [...intervals].sort((a, b) => a.start - b.start || a.end - b.end);
-  const lanes: Interval[][] = [];
-  for (const iv of sorted) {
-    let placed = false;
-    for (const lane of lanes) {
-      if (lane[lane.length - 1].end < iv.start) {
-        lane.push(iv);
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) lanes.push([iv]);
-  }
-  return lanes;
-}
-
-const COL_W = 26; // px per day
-const LABEL_W = 124; // px for sticky row-label column
-
-export function ExcelView({ year, entries, filters, onDayClick, onEntryClick }: Props) {
-  const daysInYear = useMemo(() => {
-    const isLeap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
-    return isLeap ? 366 : 365;
-  }, [year]);
-
+export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryClick }: Props) {
+  // Always start from today; show through end of (current year + 2)
   const days = useMemo(() => {
-    const out: { date: Date; iso: string; day: number; month: number; weekday: number }[] = [];
-    for (let i = 0; i < daysInYear; i++) {
-      const d = new Date(year, 0, 1 + i);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const endYear = today.getFullYear() + 2;
+    const end = new Date(endYear, 11, 31);
+    const out: { date: Date; iso: string; weekday: number; month: number; isMonthStart: boolean }[] = [];
+    const cursor = new Date(today);
+    let prevMonth = -1;
+    while (cursor <= end) {
+      const m = cursor.getMonth();
       out.push({
-        date: d,
-        iso: toISODate(d),
-        day: d.getDate(),
-        month: d.getMonth(),
-        weekday: d.getDay(),
+        date: new Date(cursor),
+        iso: toISODate(cursor),
+        weekday: cursor.getDay(),
+        month: m,
+        isMonthStart: m !== prevMonth,
       });
+      prevMonth = m;
+      cursor.setDate(cursor.getDate() + 1);
     }
     return out;
-  }, [year, daysInYear]);
+  }, []);
 
-  const monthSpans = useMemo(() => {
-    const spans: { month: number; span: number }[] = [];
-    for (let m = 0; m < 12; m++) {
-      spans.push({ month: m, span: new Date(year, m + 1, 0).getDate() });
+  const cols = useMemo(() => COL_DEFS.filter((c) => filters.has(c.key)), [filters]);
+
+  // Map iso -> per-column entries
+  const cellMap = useMemo(() => {
+    const map = new Map<string, Map<ColKey, CalendarEntry[]>>();
+    for (const d of days) map.set(d.iso, new Map());
+    for (const e of entries) {
+      const start = e.start_date < days[0].iso ? days[0].iso : e.start_date;
+      const end = e.end_date;
+      if (end < days[0].iso) continue;
+      if (start > days[days.length - 1].iso) continue;
+      for (const col of cols) {
+        if (!entryInCol(e, col.key)) continue;
+        // iterate covered days
+        const s = new Date(start);
+        const en = new Date(end);
+        const last = days[days.length - 1].date;
+        const cap = en > last ? last : en;
+        const cur = new Date(s);
+        while (cur <= cap) {
+          const iso = toISODate(cur);
+          const row = map.get(iso);
+          if (row) {
+            const arr = row.get(col.key) ?? [];
+            arr.push(e);
+            row.set(col.key, arr);
+          }
+          cur.setDate(cur.getDate() + 1);
+        }
+      }
     }
-    return spans;
-  }, [year]);
+    return map;
+  }, [entries, cols, days]);
 
   const todayISO = toISODate(new Date());
-  const todayIdx = useMemo(() => {
-    const n = new Date();
-    if (n.getFullYear() !== year) return -1;
-    return dayIndex(year, todayISO);
-  }, [year, todayISO]);
-
-  const rows = useMemo(() => {
-    return ROW_DEFS.filter((r) => filters.has(r.key)).map((def) => {
-      const ivs: Interval[] = [];
-      for (const e of entries) {
-        if (!entryInRow(e, def.key)) continue;
-        const s = dayIndex(year, e.start_date);
-        const en = dayIndex(year, e.end_date);
-        const start = Math.max(0, s);
-        const end = Math.min(daysInYear - 1, en);
-        if (end < 0 || start > daysInYear - 1 || start > end) continue;
-        ivs.push({ entry: e, start, end });
-      }
-      const lanes = assignLanes(ivs);
-      return { def, lanes: lanes.length ? lanes : [[]] };
-    });
-  }, [entries, filters, year, daysInYear]);
-
-  const totalWidth = LABEL_W + daysInYear * COL_W;
+  const totalWidth = DATE_COL_W + cols.length * CAT_COL_W;
 
   return (
     <div
-      className="relative overflow-auto rounded-2xl border border-border bg-card shadow-sm"
-      style={{ maxHeight: "78vh" }}
+      className="relative overflow-auto rounded-xl border border-border bg-card shadow-sm overscroll-contain"
+      style={{ maxHeight: "78vh", WebkitOverflowScrolling: "touch" }}
     >
       <table
         className="border-collapse bg-card text-xs select-none"
         style={{ tableLayout: "fixed", width: totalWidth }}
       >
         <colgroup>
-          <col style={{ width: LABEL_W }} />
-          {days.map((_, i) => (
-            <col key={i} style={{ width: COL_W }} />
+          <col style={{ width: DATE_COL_W }} />
+          {cols.map((c) => (
+            <col key={c.key} style={{ width: CAT_COL_W }} />
           ))}
         </colgroup>
         <thead>
-          {/* Months row */}
           <tr>
             <th
-              rowSpan={3}
-              className="sticky left-0 top-0 z-30 border-b border-r-2 border-foreground bg-foreground px-2 py-1 text-center text-[11px] font-bold uppercase tracking-wider text-background"
-              style={{ width: LABEL_W }}
+              className="sticky left-0 top-0 z-30 border-b-2 border-r-2 border-border bg-foreground px-2 py-2 text-left text-[11px] font-bold uppercase tracking-wider text-background"
+              style={{ width: DATE_COL_W }}
             >
-              {year}
+              Dato
             </th>
-            {monthSpans.map(({ month, span }) => (
+            {cols.map((c) => (
               <th
-                key={month}
-                colSpan={span}
-                className="sticky top-0 z-20 border-b border-r-2 border-foreground/70 bg-foreground px-1 py-1 text-center text-[11px] font-bold uppercase tracking-wider text-background"
+                key={c.key}
+                className={cn(
+                  "sticky top-0 z-20 border-b-2 border-r border-border bg-foreground/95 px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-background backdrop-blur",
+                )}
               >
-                {MONTHS_SHORT[month]}
+                {c.label}
               </th>
             ))}
           </tr>
-          {/* Day numbers row */}
-          <tr>
-            {days.map((d, i) => {
-              const isWeekend = d.weekday === 0 || d.weekday === 6;
-              const isToday = i === todayIdx;
-              const monthEnd = i + 1 === daysInYear || days[i + 1].month !== d.month;
-              return (
-                <th
-                  key={i}
-                  className={cn(
-                    "sticky z-10 border-b border-border/70 bg-secondary/80 px-0 py-0.5 text-center text-[10px] font-semibold text-foreground",
-                    monthEnd ? "border-r-2 border-r-foreground/40" : "border-r border-r-border/40",
-                    isWeekend && "bg-secondary",
-                    isToday && "bg-primary text-primary-foreground",
-                  )}
-                  style={{ top: 24 }}
-                >
-                  {d.day}
-                </th>
-              );
-            })}
-          </tr>
-          {/* Weekday row */}
-          <tr>
-            {days.map((d, i) => {
-              const isWeekend = d.weekday === 0 || d.weekday === 6;
-              const isToday = i === todayIdx;
-              const monthEnd = i + 1 === daysInYear || days[i + 1].month !== d.month;
-              return (
-                <th
-                  key={i}
-                  className={cn(
-                    "sticky z-10 border-b-2 border-foreground/40 bg-secondary/60 px-0 py-0.5 text-center text-[9px] font-medium uppercase text-muted-foreground",
-                    monthEnd ? "border-r-2 border-r-foreground/40" : "border-r border-r-border/40",
-                    isWeekend && "bg-secondary text-foreground",
-                    isToday && "bg-primary/80 text-primary-foreground",
-                  )}
-                  style={{ top: 46 }}
-                >
-                  {WEEKDAYS_SHORT[d.weekday]}
-                </th>
-              );
-            })}
-          </tr>
         </thead>
         <tbody>
-          {rows.map(({ def, lanes }) => (
-            <RowGroup
-              key={def.key}
-              def={def}
-              lanes={lanes}
-              days={days}
-              daysInYear={daysInYear}
-              todayIdx={todayIdx}
-              onDayClick={onDayClick}
-              onEntryClick={onEntryClick}
-            />
-          ))}
+          {days.map((d, idx) => {
+            const isWeekend = d.weekday === 0 || d.weekday === 6;
+            const isToday = d.iso === todayISO;
+            const dateLabel = `${d.date.getDate()} ${MONTHS_SHORT[d.month]}`;
+            return (
+              <tr
+                key={d.iso}
+                className={cn(
+                  idx % 2 === 0 ? "bg-card" : "bg-secondary/30",
+                  d.isMonthStart && "border-t-2 border-t-foreground/40",
+                )}
+              >
+                <th
+                  scope="row"
+                  onClick={() => onDayClick(d.date)}
+                  className={cn(
+                    "sticky left-0 z-10 cursor-pointer border-b border-r-2 border-border/70 px-2 text-left align-middle text-[11px] font-semibold",
+                    idx % 2 === 0 ? "bg-card" : "bg-secondary/60",
+                    isWeekend && "text-foreground",
+                    isToday && "bg-primary text-primary-foreground",
+                  )}
+                  style={{ width: DATE_COL_W, height: ROW_H }}
+                >
+                  <div className="flex items-center justify-between gap-1">
+                    <span>{dateLabel}</span>
+                    <span className="text-[9px] uppercase opacity-60">{WEEKDAYS_SHORT[d.weekday]}</span>
+                  </div>
+                </th>
+                {cols.map((c) => {
+                  const list = cellMap.get(d.iso)?.get(c.key) ?? [];
+                  const primary = list[0];
+                  return (
+                    <td
+                      key={c.key}
+                      onClick={() => {
+                        if (primary && onEntryClick) onEntryClick(primary);
+                        else onDayClick(d.date);
+                      }}
+                      className={cn(
+                        "cursor-pointer border-b border-r border-border/40 p-0.5 align-middle",
+                        isWeekend && "bg-secondary/40",
+                        isToday && "ring-1 ring-inset ring-primary/50",
+                      )}
+                      style={{ height: ROW_H }}
+                    >
+                      {primary ? (
+                        <div
+                          className={cn(
+                            "flex h-full w-full items-center gap-1 truncate rounded-sm px-1 text-[10px] font-semibold leading-tight",
+                            c.color,
+                          )}
+                          title={list.map((e) => e.title).join(", ")}
+                        >
+                          {isBirthdayEntry(primary) && <Cake className="h-2.5 w-2.5 shrink-0" />}
+                          <span className="truncate">{primary.title}</span>
+                          {list.length > 1 && (
+                            <span className="ml-auto rounded-full bg-background/30 px-1 text-[9px]">
+                              +{list.length - 1}
+                            </span>
+                          )}
+                        </div>
+                      ) : null}
+                    </td>
+                  );
+                })}
+              </tr>
+            );
+          })}
         </tbody>
       </table>
     </div>
-  );
-}
-
-function RowGroup({
-  def,
-  lanes,
-  days,
-  daysInYear,
-  todayIdx,
-  onDayClick,
-  onEntryClick,
-}: {
-  def: { key: RowKey; label: string; color: string; soft: string };
-  lanes: Interval[][];
-  days: { date: Date; weekday: number; month: number }[];
-  daysInYear: number;
-  todayIdx: number;
-  onDayClick: (d: Date) => void;
-  onEntryClick?: (e: CalendarEntry) => void;
-}) {
-  return (
-    <>
-      {lanes.map((lane, laneIdx) => {
-        const cells: ReactNode[] = [];
-        const sorted = [...lane].sort((a, b) => a.start - b.start);
-        let i = 0;
-        let cursor = 0;
-        while (i < daysInYear) {
-          const iv = sorted[cursor];
-          if (iv && iv.start === i) {
-            const span = iv.end - iv.start + 1;
-            const isBday = isBirthdayEntry(iv.entry);
-            cells.push(
-              <td
-                key={`iv-${iv.entry.id}-${i}`}
-                colSpan={span}
-                className="border-b border-r border-border/30 p-0.5 align-middle"
-              >
-                <button
-                  type="button"
-                  onClick={(ev) => {
-                    ev.stopPropagation();
-                    if (onEntryClick) onEntryClick(iv.entry);
-                    else onDayClick(days[i].date);
-                  }}
-                  title={iv.entry.title}
-                  className={cn(
-                    "flex h-5 w-full items-center gap-1 truncate rounded-sm px-1 text-left text-[10px] font-semibold leading-none shadow-sm transition-transform hover:scale-[1.01]",
-                    def.color,
-                  )}
-                >
-                  {isBday && <Cake className="h-2.5 w-2.5 shrink-0" />}
-                  <span className="truncate">{iv.entry.title}</span>
-                </button>
-              </td>,
-            );
-            i += span;
-            cursor++;
-          } else {
-            const d = days[i];
-            const isWeekend = d.weekday === 0 || d.weekday === 6;
-            const isToday = i === todayIdx;
-            const monthEnd = i + 1 === daysInYear || days[i + 1].month !== d.month;
-            cells.push(
-              <td
-                key={`e-${i}`}
-                onClick={() => onDayClick(d.date)}
-                className={cn(
-                  "cursor-pointer border-b border-border/30 align-middle p-0 hover:bg-accent/40",
-                  monthEnd ? "border-r-2 border-r-foreground/30" : "border-r border-r-border/30",
-                  isWeekend && "bg-secondary/60",
-                  isToday && "bg-primary/10 ring-1 ring-inset ring-primary/60",
-                )}
-                style={{ height: 24 }}
-                aria-label={`Legg til oppføring ${toISODate(d.date)}`}
-              />,
-            );
-            i++;
-          }
-        }
-        return (
-          <tr key={`${def.key}-${laneIdx}`} className="odd:bg-card even:bg-secondary/20">
-            {laneIdx === 0 && (
-              <th
-                scope="row"
-                rowSpan={lanes.length}
-                className={cn(
-                  "sticky left-0 z-10 border-b border-r-2 border-foreground/40 px-2 py-1 text-left align-middle text-[11px] font-semibold uppercase tracking-wide",
-                  def.soft,
-                )}
-                style={{ width: LABEL_W }}
-              >
-                {def.label}
-              </th>
-            )}
-            {cells}
-          </tr>
-        );
-      })}
-    </>
   );
 }
