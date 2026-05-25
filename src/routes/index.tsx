@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { CalendarGrid } from "@/components/CalendarGrid";
 import { YearOverview } from "@/components/YearOverview";
 import { ExcelView } from "@/components/ExcelView";
-import { PinchZoomContainer } from "@/components/PinchZoomContainer";
 import { EntryDialog } from "@/components/EntryDialog";
 import { DayDetailPanel } from "@/components/DayDetailPanel";
 import { AssistantButton } from "@/components/AssistantButton";
