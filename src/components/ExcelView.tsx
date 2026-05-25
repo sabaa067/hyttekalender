@@ -14,6 +14,10 @@ const MONTHS_SHORT = [
   "Jan", "Feb", "Mar", "Apr", "Mai", "Jun",
   "Jul", "Aug", "Sep", "Okt", "Nov", "Des",
 ];
+const MONTHS_LONG = [
+  "Januar", "Februar", "Mars", "April", "Mai", "Juni",
+  "Juli", "August", "September", "Oktober", "November", "Desember",
+];
 
 type Props = {
   year: number;
@@ -52,30 +56,43 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
   }, [visible]);
 
   const todayISO = toISODate(new Date());
+  const todayMonth = new Date().getMonth();
+  const todayYear = new Date().getFullYear();
 
   return (
-    <table className="border-collapse bg-card text-sm select-none">
-        <thead className="bg-card">
-          <tr>
-            <th className="sticky left-0 z-20 w-12 border-b border-r border-border bg-card px-2 py-2 text-center text-xs font-semibold text-muted-foreground">
-              Dag
+    <table
+      className="border-collapse bg-card text-sm select-none"
+      style={{ tableLayout: "fixed", width: "max-content" }}
+    >
+        <thead>
+          <tr className="bg-foreground text-background">
+            <th className="sticky left-0 z-20 w-14 border-b-2 border-r-2 border-foreground bg-foreground px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wider">
+              {year}
             </th>
-            {MONTHS_SHORT.map((m, i) => (
-              <th
-                key={i}
-                className="min-w-[110px] border-b border-r border-border bg-card px-2 py-2 text-center text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-              >
-                {m}
-              </th>
-            ))}
+            {MONTHS_LONG.map((m, i) => {
+              const isCurrent = i === todayMonth && year === todayYear;
+              return (
+                <th
+                  key={i}
+                  className={cn(
+                    "w-[120px] border-b-2 border-r-2 border-foreground/60 px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wider",
+                    isCurrent ? "bg-primary text-primary-foreground" : "",
+                  )}
+                  title={m}
+                >
+                  <span className="sm:hidden">{MONTHS_SHORT[i]}</span>
+                  <span className="hidden sm:inline">{m}</span>
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: 31 }, (_, dIdx) => {
             const day = dIdx + 1;
             return (
-              <tr key={day} className="even:bg-secondary/30">
-                <td className="sticky left-0 z-10 w-12 border-b border-r border-border bg-inherit px-2 py-1 text-center text-xs font-semibold text-muted-foreground">
+              <tr key={day} className="odd:bg-card even:bg-secondary/40">
+                <td className="sticky left-0 z-10 w-14 border-b border-r-2 border-border bg-inherit px-2 py-1 text-center text-xs font-bold text-foreground">
                   {day}
                 </td>
                 {MONTHS_SHORT.map((_, mIdx) => {
@@ -84,7 +101,7 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
                     return (
                       <td
                         key={mIdx}
-                        className="border-b border-r border-border bg-muted/40"
+                        className="w-[120px] border-b border-r-2 border-border/70 bg-muted/60"
                       />
                     );
                   }
@@ -98,9 +115,9 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
                     <td
                       key={mIdx}
                       className={cn(
-                        "group min-w-[110px] cursor-pointer border-b border-r border-border align-top p-1 transition-all hover:bg-accent/40 hover:ring-1 hover:ring-inset hover:ring-primary/30 active:bg-accent/60",
-                        isWeekend && "bg-secondary/40",
-                        isToday && "ring-2 ring-foreground ring-inset",
+                        "group w-[120px] cursor-pointer border-b border-r-2 border-border/70 align-top p-1 transition-all hover:bg-accent/40 hover:ring-1 hover:ring-inset hover:ring-primary/30 active:bg-accent/60",
+                        isWeekend && "bg-secondary/60",
+                        isToday && "ring-2 ring-primary ring-inset",
                       )}
                       onClick={() => onDayClick(date)}
                       role="button"
@@ -111,14 +128,12 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
                         {dayEntries.map((e) => {
                           const v = getEntryVisual(e);
                           const isBday = isBirthdayEntry(e);
+                          // Use solid fills to mirror the original colored
+                          // cells of the cabin spreadsheet.
                           const style =
-                            v.weight === "strong"
-                              ? cn(v.color, "shadow-sm")
-                              : v.weight === "warm"
-                              ? v.soft
-                              : v.weight === "medium"
-                              ? v.soft
-                              : "bg-card border border-border text-muted-foreground";
+                            v.weight === "minimal"
+                              ? "bg-card border border-border text-foreground"
+                              : cn(v.color, "shadow-sm");
                           return (
                             <button
                               key={e.id}
@@ -129,7 +144,7 @@ export function ExcelView({ year, entries, filters, cabinLocations, onDayClick, 
                                 else onDayClick(date);
                               }}
                               className={cn(
-                                "flex items-center gap-1 truncate rounded px-1 py-0.5 text-left text-[10px] font-medium transition-transform hover:scale-[1.02] hover:shadow",
+                                "flex items-center gap-1 truncate rounded-sm px-1 py-0.5 text-left text-[10px] font-semibold leading-tight transition-transform hover:scale-[1.02] hover:shadow",
                                 style,
                               )}
                               title={e.title}

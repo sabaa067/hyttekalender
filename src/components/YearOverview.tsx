@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { cn } from "@/lib/utils";
 import {
   type CalendarEntry,
@@ -24,6 +24,17 @@ type Props = {
 };
 
 export function YearOverview({ year, entries, filters, cabinLocations, onDayClick }: Props) {
+  const today = new Date();
+  const isCurrentYear = today.getFullYear() === year;
+  const currentMonth = today.getMonth();
+  const currentRef = useRef<HTMLDivElement | null>(null);
+  useEffect(() => {
+    if (!isCurrentYear) return;
+    const t = setTimeout(() => {
+      currentRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => clearTimeout(t);
+  }, [isCurrentYear, year]);
   const visible = useMemo(
     () =>
       entries.filter(
@@ -53,21 +64,27 @@ export function YearOverview({ year, entries, filters, cabinLocations, onDayClic
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4 lg:grid-cols-3 xl:grid-cols-4">
       {Array.from({ length: 12 }, (_, m) => (
-        <MiniMonth
+        <div
           key={m}
-          year={year}
-          month={m}
-          byDate={byDate}
-          onDayClick={onDayClick}
-        />
+          ref={isCurrentYear && m === currentMonth ? currentRef : undefined}
+          className="scroll-mt-40"
+        >
+          <MiniMonth
+            year={year}
+            month={m}
+            byDate={byDate}
+            onDayClick={onDayClick}
+            highlight={isCurrentYear && m === currentMonth}
+          />
+        </div>
       ))}
     </div>
   );
 }
 
 function MiniMonth({
-  year, month, byDate, onDayClick,
-}: { year: number; month: number; byDate: Map<string, CalendarEntry[]>; onDayClick: (d: Date) => void }) {
+  year, month, byDate, onDayClick, highlight,
+}: { year: number; month: number; byDate: Map<string, CalendarEntry[]>; onDayClick: (d: Date) => void; highlight?: boolean }) {
   const cells = useMemo(() => {
     const first = new Date(year, month, 1);
     const offset = (first.getDay() + 6) % 7;
@@ -83,7 +100,14 @@ function MiniMonth({
   const todayISO = toISODate(new Date());
 
   return (
-    <div className="rounded-2xl border border-border/40 bg-card/80 p-3">
+    <div
+      className={cn(
+        "rounded-2xl border bg-card/80 p-3 transition-shadow",
+        highlight
+          ? "border-foreground/60 shadow-md ring-1 ring-foreground/20"
+          : "border-border/40",
+      )}
+    >
       <h3 className="mb-2 text-center text-sm font-semibold tracking-tight text-foreground">
         {MONTH_NAMES[month]}
       </h3>

@@ -61,9 +61,12 @@ function Index() {
   const canEdit = user?.role === "admin";
   const [view, setView] = usePersistedState<ViewMode>("hk_view", "modern");
   const setViewMode = (next: ViewMode) => {
+    const n = new Date();
     if (next === "modern") {
-      const n = new Date();
       setMonthDate(new Date(n.getFullYear(), n.getMonth(), 1));
+    }
+    if (next === "overview") {
+      setYear(n.getFullYear());
     }
     setView(next);
   };
@@ -103,21 +106,13 @@ function Index() {
       setShowHolidays(true);
     }
   };
-  const [monthDate, setMonthDate] = usePersistedState<Date>(
-    "hk_month",
-    (() => {
-      const n = new Date();
-      return new Date(n.getFullYear(), n.getMonth(), 1);
-    })(),
-    {
-      serialize: (d) => d.toISOString(),
-      deserialize: (raw) => {
-        const d = new Date(typeof raw === "string" ? raw : Date.now());
-        return new Date(d.getFullYear(), d.getMonth(), 1);
-      },
-    },
-  );
-  const [year, setYear] = useState(() => new Date().getFullYear());
+  // Always boot on the current real-world month/year. Users can navigate
+  // backwards manually, but the default starting position is "today".
+  const [monthDate, setMonthDate] = useState<Date>(() => {
+    const n = new Date();
+    return new Date(n.getFullYear(), n.getMonth(), 1);
+  });
+  const [year, setYear] = useState<number>(() => new Date().getFullYear());
   const [entryOpen, setEntryOpen] = useState(false);
   const [editingEntry, setEditingEntry] = useState<CalendarEntry | null>(null);
   const [initialDate, setInitialDate] = useState<Date | null>(null);
