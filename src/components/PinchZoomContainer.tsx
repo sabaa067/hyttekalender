@@ -17,12 +17,12 @@ type Props = {
 function ZoomControls() {
   const { zoomIn, zoomOut, resetTransform } = useControls();
   const btn =
-    "flex h-9 w-9 items-center justify-center rounded-full bg-foreground/85 text-background shadow-lg backdrop-blur transition hover:bg-foreground active:scale-95";
+    "flex h-8 w-8 items-center justify-center text-background/90 transition hover:text-background active:scale-95";
   return (
-    <div className="pointer-events-auto absolute bottom-3 right-3 z-20 flex flex-col gap-2">
-      <button type="button" aria-label="Zoom inn" className={btn} onClick={() => zoomIn(0.4)}>
-        <Plus className="h-4 w-4" />
-      </button>
+    <div
+      className="pointer-events-auto absolute bottom-3 right-3 z-20 flex items-center gap-0.5 rounded-full bg-foreground/85 px-1 py-0.5 shadow-lg backdrop-blur"
+      style={{ paddingBottom: "max(0.125rem, env(safe-area-inset-bottom, 0px))" }}
+    >
       <button type="button" aria-label="Zoom ut" className={btn} onClick={() => zoomOut(0.4)}>
         <Minus className="h-4 w-4" />
       </button>
@@ -32,7 +32,10 @@ function ZoomControls() {
         className={btn}
         onClick={() => resetTransform()}
       >
-        <Maximize2 className="h-4 w-4" />
+        <Maximize2 className="h-3.5 w-3.5" />
+      </button>
+      <button type="button" aria-label="Zoom inn" className={btn} onClick={() => zoomIn(0.4)}>
+        <Plus className="h-4 w-4" />
       </button>
     </div>
   );
@@ -48,7 +51,7 @@ function ZoomControls() {
  */
 export function PinchZoomContainer({
   children,
-  minScale = 0.35,
+  minScale = 0.4,
   maxScale = 5,
   className,
 }: Props) {
@@ -65,7 +68,8 @@ export function PinchZoomContainer({
         initialScale={1}
         minScale={minScale}
         maxScale={maxScale}
-        limitToBounds={false}
+        limitToBounds
+        centerZoomedOut
         centerOnInit
         smooth
         wheel={{ step: 0.12 }}
