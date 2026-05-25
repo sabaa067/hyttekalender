@@ -314,7 +314,7 @@ export const askAssistant = createServerFn({ method: "POST" })
     const gateway = createLovableAiGatewayProvider(apiKey);
     // Rask modell med moderne resonneringsevne – mye raskere enn 2.5-pro,
     // samtidig sterk nok til semantisk tolkning og fuzzy navnematching.
-    const model = gateway("google/gemini-3.5-flash");
+    const model = gateway("google/gemini-2.5-pro");
 
     const ResultSchema = z.object({
       intent: z.enum(["create", "answer"]),
