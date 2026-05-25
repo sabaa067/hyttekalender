@@ -379,18 +379,16 @@ function Index() {
           />
         )}
         {view === "excel" && (
-          <PinchZoomContainer>
-            <ExcelView
-              year={year}
-              entries={allEntries}
-              filters={effectiveFilters}
-              cabinLocations={cabinLocations}
-              onDayClick={(d) => {
-                setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
-                setDetailDate(d);
-              }}
-            />
-          </PinchZoomContainer>
+          <ExcelView
+            year={year}
+            entries={allEntries}
+            filters={effectiveFilters}
+            cabinLocations={cabinLocations}
+            onDayClick={(d) => {
+              setMonthDate(new Date(d.getFullYear(), d.getMonth(), 1));
+              setDetailDate(d);
+            }}
+          />
         )}
 
         <CalendarNav
