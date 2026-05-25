@@ -285,61 +285,63 @@ function Index() {
             />
           </div>
 
-          {/* Row 4: filter chips — horizontal scroll on mobile */}
-          <div className="-mx-3 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-            <div className="flex w-max items-center gap-1.5">
-              <button
-                type="button"
-                onClick={toggleAll}
-                className={cn(
-                  "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                  allActive
-                    ? "bg-foreground text-background"
-                    : "bg-card/70 text-muted-foreground hover:bg-secondary",
-                )}
-              >
-                Alt
-              </button>
-              {FILTERS.map((f) => {
-                const active = filters.has(f.key);
-                const meta = FILTER_META[f.key as Exclude<typeof f.key, "holiday">];
-                return (
-                  <button
-                    key={f.key}
-                    type="button"
-                    onClick={() => toggleFilter(f.key)}
-                    className={cn(
-                      "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                      active
-                        ? cn(meta.color, "border-transparent")
-                        : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
-                    )}
-                  >
-                    {f.label}
-                  </button>
-                );
-              })}
-              {(() => {
-                const meta = CATEGORY_META.holiday;
-                return (
-                  <button
-                    type="button"
-                    onClick={() => setShowHolidays((v) => !v)}
-                    className={cn(
-                      "flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                      showHolidays
-                        ? cn(meta.color, "border-transparent")
-                        : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
-                    )}
-                    title="Vis norske høytider og helligdager"
-                  >
-                    <Sparkles className="h-3 w-3" />
-                    Høytider
-                  </button>
-                );
-              })()}
+          {/* Row 4: filter chips — hidden in Excel mode */}
+          {view !== "excel" && (
+            <div className="-mx-3 overflow-x-auto px-3 pb-1 sm:-mx-4 sm:px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div className="flex w-max items-center gap-1.5">
+                <button
+                  type="button"
+                  onClick={toggleAll}
+                  className={cn(
+                    "shrink-0 rounded-full px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                    allActive
+                      ? "bg-foreground text-background"
+                      : "bg-card/70 text-muted-foreground hover:bg-secondary",
+                  )}
+                >
+                  Alt
+                </button>
+                {FILTERS.map((f) => {
+                  const active = filters.has(f.key);
+                  const meta = FILTER_META[f.key as Exclude<typeof f.key, "holiday">];
+                  return (
+                    <button
+                      key={f.key}
+                      type="button"
+                      onClick={() => toggleFilter(f.key)}
+                      className={cn(
+                        "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                        active
+                          ? cn(meta.color, "border-transparent")
+                          : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
+                      )}
+                    >
+                      {f.label}
+                    </button>
+                  );
+                })}
+                {(() => {
+                  const meta = CATEGORY_META.holiday;
+                  return (
+                    <button
+                      type="button"
+                      onClick={() => setShowHolidays((v) => !v)}
+                      className={cn(
+                        "flex shrink-0 items-center gap-1 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                        showHolidays
+                          ? cn(meta.color, "border-transparent")
+                          : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
+                      )}
+                      title="Vis norske høytider og helligdager"
+                    >
+                      <Sparkles className="h-3 w-3" />
+                      Høytider
+                    </button>
+                  );
+                })()}
+              </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
 
