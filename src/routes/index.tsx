@@ -71,13 +71,33 @@ function Index() {
     setView(next);
   };
   const ALL_MAIN_FILTERS: FilterKey[] = ["paradis", "fjord", "event", "highlight", "note"];
+  const VALID_FILTER_KEYS = new Set<FilterKey>([
+    "paradis",
+    "fjord",
+    "event",
+    "highlight",
+    "note",
+    "holiday",
+  ]);
   const [filters, setFilters] = usePersistedState<Set<FilterKey>>(
     "hk_filters",
     new Set(ALL_MAIN_FILTERS),
     {
       serialize: (s) => Array.from(s),
-      deserialize: (raw) =>
-        new Set((Array.isArray(raw) ? raw : ALL_MAIN_FILTERS) as FilterKey[]),
+      deserialize: (raw) => {
+        // Defensive: an older build may have persisted filter keys that no
+        // longer exist (e.g. "cabin") or omitted some. Drop unknown keys and
+        // fall back to all-main when the result is empty or invalid so the
+        // calendar never silently renders only holidays.
+        if (!Array.isArray(raw)) return new Set(ALL_MAIN_FILTERS);
+        const cleaned = (raw as unknown[]).filter(
+          (k): k is FilterKey =>
+            typeof k === "string" && VALID_FILTER_KEYS.has(k as FilterKey),
+        );
+        // Holiday is controlled by `hk_holidays`, never live inside hk_filters.
+        const mains = cleaned.filter((k) => k !== "holiday");
+        return new Set(mains.length ? mains : ALL_MAIN_FILTERS);
+      },
     },
   );
   const [cabinLocations] = useState<Set<CabinLoc>>(() => new Set());
