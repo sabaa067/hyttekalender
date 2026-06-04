@@ -59,6 +59,7 @@ export function generateNorwegianHolidays(year: number): CalendarEntry[] {
       start_date: d,
       end_date: d,
       description: null,
+      created_by: null,
       created_at: now,
       updated_at: now,
     } satisfies CalendarEntry;
