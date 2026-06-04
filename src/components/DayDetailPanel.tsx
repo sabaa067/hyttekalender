@@ -94,6 +94,11 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
                     <p className="text-lg font-semibold">{e.title}</p>
                     <p className="text-sm opacity-80">
                       {v.label}
+                      {e.category === "note" && e.created_by && (
+                        <span className="ml-1 inline-flex items-center rounded-full bg-foreground/10 px-1.5 py-0.5 text-xs font-medium">
+                          {e.created_by}
+                        </span>
+                      )}
                       {" · "}
                       {sameDay
                         ? format(parseISODate(e.start_date), "d. MMM yyyy", { locale: nb })

@@ -137,6 +137,7 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
         start_date: toISODate(from),
         end_date: toISODate(to),
         description: finalDesc || null,
+        created_by: (!entry && category === "note") ? (user?.name ?? null) : undefined,
       };
       if (entry) {
         await updateEntry(entry.id, payload);

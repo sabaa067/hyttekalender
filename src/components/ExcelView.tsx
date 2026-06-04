@@ -25,46 +25,41 @@ type Props = {
   onEntryClick?: (entry: CalendarEntry) => void;
 };
 
-type ColKey = FilterKey;
+// Internal column key — note authors are separate cols derived from the "note" filter
+type ColKey =
+  | "paradis"
+  | "fjord"
+  | "event"
+  | "highlight"
+  | "holiday"
+  | "note_farfar"
+  | "note_jorgen"
+  | "note_morten";
 
-const COL_DEFS: { key: ColKey; label: string; color: string; soft: string }[] = [
-  {
-    key: "paradis",
-    label: "Paradis",
-    color: CABIN_LOCATION_META.paradis.color,
-    soft: CABIN_LOCATION_META.paradis.soft,
-  },
-  {
-    key: "fjord",
-    label: "Fjordgløtt",
-    color: CABIN_LOCATION_META.fjord.color,
-    soft: CABIN_LOCATION_META.fjord.soft,
-  },
-  {
-    key: "event",
-    label: "Arrangementer",
-    color: CATEGORY_META.event.color,
-    soft: CATEGORY_META.event.soft,
-  },
-  {
-    key: "highlight",
-    label: "Høydepunkter",
-    color: CATEGORY_META.highlight.color,
-    soft: CATEGORY_META.highlight.soft,
-  },
-  {
-    key: "note",
-    label: "Notater",
-    color: CATEGORY_META.note.color,
-    soft: CATEGORY_META.note.soft,
-  },
-  {
-    key: "holiday",
-    label: "Høytider",
-    color: CATEGORY_META.holiday.color,
-    soft: CATEGORY_META.holiday.soft,
-  },
+type ColDef = { key: ColKey; label: string; color: string; soft: string };
+
+const NOTE_COLOR = CATEGORY_META.note.color;
+const NOTE_SOFT = CATEGORY_META.note.soft;
+
+const BASE_COLS: ColDef[] = [
+  { key: "paradis",   label: "Paradis",      color: CABIN_LOCATION_META.paradis.color, soft: CABIN_LOCATION_META.paradis.soft },
+  { key: "fjord",     label: "Fjordgløtt",   color: CABIN_LOCATION_META.fjord.color,   soft: CABIN_LOCATION_META.fjord.soft },
+  { key: "event",     label: "Arrangementer",color: CATEGORY_META.event.color,          soft: CATEGORY_META.event.soft },
+  { key: "highlight", label: "Høydepunkter", color: CATEGORY_META.highlight.color,      soft: CATEGORY_META.highlight.soft },
+  { key: "holiday",   label: "Høytider",     color: CATEGORY_META.holiday.color,        soft: CATEGORY_META.holiday.soft },
 ];
+
+const NOTE_AUTHOR_COLS: ColDef[] = [
+  { key: "note_farfar", label: "Farfar notater", color: NOTE_COLOR, soft: NOTE_SOFT },
+  { key: "note_jorgen", label: "Jørgen notater", color: NOTE_COLOR, soft: NOTE_SOFT },
+  { key: "note_morten", label: "Morten notater", color: NOTE_COLOR, soft: NOTE_SOFT },
+];
+
+const NOTE_AUTHOR_MAP: Record<string, string> = {
+  note_farfar: "Farfar",
+  note_jorgen: "Jørgen",
+  note_morten: "Morten",
+};
 
 function entryInCol(e: CalendarEntry, key: ColKey): boolean {
   if (key === "paradis" || key === "fjord") {
@@ -75,15 +70,20 @@ function entryInCol(e: CalendarEntry, key: ColKey): boolean {
   }
   if (key === "highlight") return e.category === "highlight" || e.category === "birthday";
   if (key === "holiday") return e.category === "holiday";
-  return e.category === key;
+  if (key === "event") return e.category === "event";
+  if (key === "note_farfar" || key === "note_jorgen" || key === "note_morten") {
+    if (e.category !== "note") return false;
+    const author = NOTE_AUTHOR_MAP[key];
+    return (e.created_by ?? "") === author;
+  }
+  return false;
 }
 
 const DATE_COL_W = 96;
-const CAT_COL_W = 120;
+const CAT_COL_W = 130;
 const ROW_H = 30;
 
 export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryClick }: Props) {
-  // Always start from today; show through end of (current year + 2)
   const days = useMemo(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -107,9 +107,18 @@ export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryCl
     return out;
   }, []);
 
-  const cols = useMemo(() => COL_DEFS.filter((c) => filters.has(c.key)), [filters]);
+  // Build visible columns: base cols filtered by FilterKey, and note → 3 author cols
+  const cols = useMemo<ColDef[]>(() => {
+    const result: ColDef[] = [];
+    for (const col of BASE_COLS) {
+      if (filters.has(col.key as FilterKey)) result.push(col);
+    }
+    if (filters.has("note")) {
+      result.push(...NOTE_AUTHOR_COLS);
+    }
+    return result;
+  }, [filters]);
 
-  // Map iso -> per-column entries
   const cellMap = useMemo(() => {
     const map = new Map<string, Map<ColKey, CalendarEntry[]>>();
     for (const d of days) map.set(d.iso, new Map());
@@ -120,7 +129,6 @@ export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryCl
       if (start > days[days.length - 1].iso) continue;
       for (const col of cols) {
         if (!entryInCol(e, col.key)) continue;
-        // iterate covered days
         const s = new Date(start);
         const en = new Date(end);
         const last = days[days.length - 1].date;
@@ -170,9 +178,7 @@ export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryCl
             {cols.map((c) => (
               <th
                 key={c.key}
-                className={cn(
-                  "sticky top-0 z-20 border-b-2 border-r border-border bg-foreground/95 px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-background backdrop-blur",
-                )}
+                className="sticky top-0 z-20 border-b-2 border-r border-border bg-foreground/95 px-2 py-2 text-center text-[11px] font-bold uppercase tracking-wider text-background backdrop-blur"
               >
                 {c.label}
               </th>

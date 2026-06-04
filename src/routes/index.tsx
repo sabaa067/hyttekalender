@@ -32,6 +32,9 @@ import {
   type FilterKey,
   type CalendarEntry,
 } from "@/lib/entries";
+
+const NOTE_AUTHORS = ["Farfar", "Jørgen", "Morten"] as const;
+type NoteAuthor = typeof NOTE_AUTHORS[number];
 import { CABIN_LOCATION_META, CATEGORY_META, type CabinLocation } from "@/lib/categories";
 
 const FILTER_META: Record<
@@ -139,6 +142,29 @@ function Index() {
   const [detailDate, setDetailDate] = useState<Date | null>(null);
   const [historyOpen, setHistoryOpen] = useState(false);
 
+  const [noteAuthors, setNoteAuthors] = usePersistedState<Set<NoteAuthor>>(
+    "hk_note_authors",
+    new Set<NoteAuthor>(),
+    {
+      serialize: (s) => Array.from(s),
+      deserialize: (raw) => {
+        if (!Array.isArray(raw)) return new Set<NoteAuthor>();
+        return new Set((raw as unknown[]).filter((k): k is NoteAuthor =>
+          typeof k === "string" && NOTE_AUTHORS.includes(k as NoteAuthor)
+        ));
+      },
+    },
+  );
+
+  const toggleNoteAuthor = (author: NoteAuthor) => {
+    setNoteAuthors((prev) => {
+      const next = new Set(prev);
+      if (next.has(author)) next.delete(author);
+      else next.add(author);
+      return next;
+    });
+  };
+
   const { data: entries = [], isLoading } = useQuery({
     queryKey: ["entries"],
     queryFn: fetchEntries,
@@ -155,6 +181,15 @@ function Index() {
     () => (holidayEntries.length ? [...entries, ...holidayEntries] : entries),
     [entries, holidayEntries],
   );
+
+  // When note filter is active and specific authors are selected, hide notes from other authors
+  const filteredByAuthor = useMemo(() => {
+    if (!filters.has("note") || noteAuthors.size === 0) return allEntries;
+    return allEntries.filter((e) => {
+      if (e.category !== "note") return true;
+      return noteAuthors.has((e.created_by ?? "") as NoteAuthor);
+    });
+  }, [allEntries, filters, noteAuthors]);
 
   // Holidays are an overlay. When category filters are active, inject "holiday"
   // so holiday entries also pass; when no filters are active everything shows
@@ -305,19 +340,44 @@ function Index() {
                   const active = filters.has(f.key);
                   const meta = FILTER_META[f.key as Exclude<typeof f.key, "holiday">];
                   return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => toggleFilter(f.key)}
-                      className={cn(
-                        "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                        active
-                          ? cn(meta.color, "border-transparent")
-                          : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
+                    <div key={f.key} className="flex items-center gap-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleFilter(f.key)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                          active
+                            ? cn(meta.color, "border-transparent")
+                            : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                      {/* Note author sub-filters — shown inline when Notater is active */}
+                      {f.key === "note" && active && (
+                        <div className="flex items-center gap-1 pl-0.5">
+                          {NOTE_AUTHORS.map((author) => {
+                            const sel = noteAuthors.has(author);
+                            return (
+                              <button
+                                key={author}
+                                type="button"
+                                onClick={() => toggleNoteAuthor(author)}
+                                className={cn(
+                                  "shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-medium transition-colors sm:text-xs",
+                                  sel
+                                    ? cn(meta.color, "border-transparent")
+                                    : cn(meta.soft, "border-border/40 opacity-60 hover:opacity-90"),
+                                )}
+                                title={`Vis bare ${author}s notater`}
+                              >
+                                {author}
+                              </button>
+                            );
+                          })}
+                        </div>
                       )}
-                    >
-                      {f.label}
-                    </button>
+                    </div>
                   );
                 })}
                 {(() => {
@@ -361,7 +421,7 @@ function Index() {
         {view === "modern" && (
           <CalendarGrid
             monthDate={monthDate}
-            entries={allEntries}
+            entries={filteredByAuthor}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => setDetailDate(d)}
@@ -370,7 +430,7 @@ function Index() {
         {view === "overview" && (
           <YearOverview
             year={year}
-            entries={allEntries}
+            entries={filteredByAuthor}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
@@ -382,7 +442,7 @@ function Index() {
         {view === "excel" && (
           <ExcelView
             year={year}
-            entries={allEntries}
+            entries={filteredByAuthor}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
