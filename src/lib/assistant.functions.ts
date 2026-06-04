@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { generateText, Output } from "ai";
 import { z } from "zod";
-import { createAnthropic } from "@ai-sdk/anthropic";
+import { createLovableAiGatewayProvider } from "./ai-gateway";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { generateHolidaysForYears } from "./holidays";
 import { detectCabinLocations } from "./categories";
@@ -248,9 +248,9 @@ export const askAssistant = createServerFn({ method: "POST" })
       ] as string[],
     };
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
+    const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) {
-      console.error("[assistant] missing ANTHROPIC_API_KEY");
+      console.error("[assistant] missing LOVABLE_API_KEY");
       return fallback;
     }
 
@@ -311,9 +311,8 @@ export const askAssistant = createServerFn({ method: "POST" })
     ];
 
     const today = new Date().toISOString().slice(0, 10);
-    // Claude Sonnet 4.5 – sterk på norsk og strukturert JSON-output.
-    const anthropic = createAnthropic({ apiKey });
-    const model = anthropic("claude-sonnet-4-5");
+    const provider = createLovableAiGatewayProvider(apiKey);
+    const model = provider("claude-sonnet-4-5");
 
     const ResultSchema = z.object({
       intent: z.enum(["create", "answer"]),
