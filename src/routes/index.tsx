@@ -339,19 +339,38 @@ function Index() {
                   const active = filters.has(f.key);
                   const meta = FILTER_META[f.key as Exclude<typeof f.key, "holiday">];
                   return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => toggleFilter(f.key)}
-                      className={cn(
-                        "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                        active
-                          ? cn(meta.color, "border-transparent")
-                          : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
-                      )}
-                    >
-                      {f.label}
-                    </button>
+                    <div key={f.key} className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleFilter(f.key)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                          active
+                            ? cn(meta.color, "border-transparent")
+                            : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                      {f.key === "note" && active && NOTE_AUTHORS.map((a) => {
+                        const aActive = noteAuthors.has(a);
+                        return (
+                          <button
+                            key={a}
+                            type="button"
+                            onClick={() => toggleNoteAuthor(a)}
+                            className={cn(
+                              "shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors sm:text-xs",
+                              aActive
+                                ? "border-transparent bg-foreground text-background"
+                                : "border-border/40 bg-card/70 text-muted-foreground hover:bg-secondary",
+                            )}
+                          >
+                            {a}
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
                 {(() => {
