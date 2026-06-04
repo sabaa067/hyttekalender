@@ -138,6 +138,7 @@ export type Database = {
         Row: {
           category: Database["public"]["Enums"]["entry_category"]
           created_at: string
+          created_by: string | null
           description: string | null
           end_date: string
           id: string
@@ -148,6 +149,7 @@ export type Database = {
         Insert: {
           category: Database["public"]["Enums"]["entry_category"]
           created_at?: string
+          created_by?: string | null
           description?: string | null
           end_date: string
           id?: string
@@ -158,6 +160,7 @@ export type Database = {
         Update: {
           category?: Database["public"]["Enums"]["entry_category"]
           created_at?: string
+          created_by?: string | null
           description?: string | null
           end_date?: string
           id?: string

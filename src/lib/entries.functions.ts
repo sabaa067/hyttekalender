@@ -20,6 +20,7 @@ const createSchema = z.object({
   start_date: isoDate,
   end_date: isoDate,
   description: z.string().max(5000).nullable().optional(),
+  created_by: z.string().trim().min(1).max(100).nullable().optional(),
 });
 
 const updateSchema = z.object({

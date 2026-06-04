@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import { Cake } from "lucide-react";
-import { type CalendarEntry, toISODate, type FilterKey } from "@/lib/entries";
+import { type CalendarEntry, toISODate, type FilterKey, NOTE_AUTHORS, type NoteAuthor } from "@/lib/entries";
 import {
   CATEGORY_META,
   CABIN_LOCATION_META,
@@ -25,48 +25,59 @@ type Props = {
   onEntryClick?: (entry: CalendarEntry) => void;
 };
 
-type ColKey = FilterKey;
+type ColKey = FilterKey | `note:${NoteAuthor}`;
 
-const COL_DEFS: { key: ColKey; label: string; color: string; soft: string }[] = [
+const COL_DEFS: { key: ColKey; label: string; color: string; soft: string; filterKey: FilterKey }[] = [
   {
     key: "paradis",
     label: "Paradis",
     color: CABIN_LOCATION_META.paradis.color,
     soft: CABIN_LOCATION_META.paradis.soft,
+    filterKey: "paradis",
   },
   {
     key: "fjord",
     label: "Fjordgløtt",
     color: CABIN_LOCATION_META.fjord.color,
     soft: CABIN_LOCATION_META.fjord.soft,
+    filterKey: "fjord",
   },
   {
     key: "event",
     label: "Arrangementer",
     color: CATEGORY_META.event.color,
     soft: CATEGORY_META.event.soft,
+    filterKey: "event",
   },
   {
     key: "highlight",
     label: "Høydepunkter",
     color: CATEGORY_META.highlight.color,
     soft: CATEGORY_META.highlight.soft,
+    filterKey: "highlight",
   },
-  {
-    key: "note",
-    label: "Notater",
+  ...NOTE_AUTHORS.map((a) => ({
+    key: `note:${a}` as ColKey,
+    label: `${a} notater`,
     color: CATEGORY_META.note.color,
     soft: CATEGORY_META.note.soft,
-  },
+    filterKey: "note" as FilterKey,
+  })),
   {
     key: "holiday",
     label: "Høytider",
     color: CATEGORY_META.holiday.color,
     soft: CATEGORY_META.holiday.soft,
+    filterKey: "holiday",
   },
 ];
 
 function entryInCol(e: CalendarEntry, key: ColKey): boolean {
+  if (typeof key === "string" && key.startsWith("note:")) {
+    if (e.category !== "note") return false;
+    const author = key.slice("note:".length);
+    return e.created_by === author;
+  }
   if (key === "paradis" || key === "fjord") {
     if (e.category !== "cabin") return false;
     const loc = primaryCabinLocation(`${e.title} ${e.description ?? ""}`);
@@ -107,7 +118,7 @@ export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryCl
     return out;
   }, []);
 
-  const cols = useMemo(() => COL_DEFS.filter((c) => filters.has(c.key)), [filters]);
+  const cols = useMemo(() => COL_DEFS.filter((c) => filters.has(c.filterKey)), [filters]);
 
   // Map iso -> per-column entries
   const cellMap = useMemo(() => {

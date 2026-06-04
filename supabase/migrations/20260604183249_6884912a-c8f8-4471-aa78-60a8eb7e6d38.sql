@@ -1,0 +1,1 @@
+ALTER TABLE public.calendar_entries ADD COLUMN IF NOT EXISTS created_by text;

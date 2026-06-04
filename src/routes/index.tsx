@@ -31,6 +31,8 @@ import {
   FILTERS,
   type FilterKey,
   type CalendarEntry,
+  NOTE_AUTHORS,
+  type NoteAuthor,
 } from "@/lib/entries";
 import { CABIN_LOCATION_META, CATEGORY_META, type CabinLocation } from "@/lib/categories";
 
@@ -100,6 +102,30 @@ function Index() {
     },
   );
   const [cabinLocations] = useState<Set<CabinLoc>>(() => new Set());
+  const [noteAuthors, setNoteAuthors] = usePersistedState<Set<NoteAuthor>>(
+    "hk_note_authors",
+    new Set<NoteAuthor>(),
+    {
+      serialize: (s) => Array.from(s),
+      deserialize: (raw) => {
+        if (!Array.isArray(raw)) return new Set<NoteAuthor>();
+        const valid = new Set<string>(NOTE_AUTHORS);
+        return new Set(
+          (raw as unknown[]).filter(
+            (x): x is NoteAuthor => typeof x === "string" && valid.has(x),
+          ),
+        );
+      },
+    },
+  );
+  const toggleNoteAuthor = (a: NoteAuthor) => {
+    setNoteAuthors((prev) => {
+      const next = new Set(prev);
+      if (next.has(a)) next.delete(a);
+      else next.add(a);
+      return next;
+    });
+  };
   // Høytider is OFF by default and is NOT toggled by "Alt".
   const [showHolidays, setShowHolidays] = usePersistedState<boolean>(
     "hk_holidays",
@@ -155,6 +181,14 @@ function Index() {
     () => (holidayEntries.length ? [...entries, ...holidayEntries] : entries),
     [entries, holidayEntries],
   );
+
+  // Apply note-author sub-filter (only restricts note entries; other categories untouched).
+  const filteredEntries = useMemo(() => {
+    if (noteAuthors.size === 0) return allEntries;
+    return allEntries.filter(
+      (e) => e.category !== "note" || (e.created_by && noteAuthors.has(e.created_by as NoteAuthor)),
+    );
+  }, [allEntries, noteAuthors]);
 
   // Holidays are an overlay. When category filters are active, inject "holiday"
   // so holiday entries also pass; when no filters are active everything shows
@@ -305,19 +339,38 @@ function Index() {
                   const active = filters.has(f.key);
                   const meta = FILTER_META[f.key as Exclude<typeof f.key, "holiday">];
                   return (
-                    <button
-                      key={f.key}
-                      type="button"
-                      onClick={() => toggleFilter(f.key)}
-                      className={cn(
-                        "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
-                        active
-                          ? cn(meta.color, "border-transparent")
-                          : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
-                      )}
-                    >
-                      {f.label}
-                    </button>
+                    <div key={f.key} className="flex shrink-0 items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => toggleFilter(f.key)}
+                        className={cn(
+                          "shrink-0 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors sm:text-sm",
+                          active
+                            ? cn(meta.color, "border-transparent")
+                            : cn(meta.soft, "border-border/40 opacity-75 hover:opacity-100"),
+                        )}
+                      >
+                        {f.label}
+                      </button>
+                      {f.key === "note" && active && NOTE_AUTHORS.map((a) => {
+                        const aActive = noteAuthors.has(a);
+                        return (
+                          <button
+                            key={a}
+                            type="button"
+                            onClick={() => toggleNoteAuthor(a)}
+                            className={cn(
+                              "shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors sm:text-xs",
+                              aActive
+                                ? "border-transparent bg-foreground text-background"
+                                : "border-border/40 bg-card/70 text-muted-foreground hover:bg-secondary",
+                            )}
+                          >
+                            {a}
+                          </button>
+                        );
+                      })}
+                    </div>
                   );
                 })}
                 {(() => {
@@ -361,7 +414,7 @@ function Index() {
         {view === "modern" && (
           <CalendarGrid
             monthDate={monthDate}
-            entries={allEntries}
+            entries={filteredEntries}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => setDetailDate(d)}
@@ -370,7 +423,7 @@ function Index() {
         {view === "overview" && (
           <YearOverview
             year={year}
-            entries={allEntries}
+            entries={filteredEntries}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
@@ -382,7 +435,7 @@ function Index() {
         {view === "excel" && (
           <ExcelView
             year={year}
-            entries={allEntries}
+            entries={filteredEntries}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {
