@@ -12,6 +12,7 @@ export type CalendarEntry = {
   start_date: string; // YYYY-MM-DD
   end_date: string;
   description: string | null;
+  created_by: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -31,6 +32,9 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "highlight", label: "Høydepunkter" },
   { key: "note", label: "Notater" },
 ];
+
+export const NOTE_AUTHORS = ["Farfar", "Jørgen", "Morten"] as const;
+export type NoteAuthor = (typeof NOTE_AUTHORS)[number];
 
 function entryMatchesSingleFilter(e: CalendarEntry, f: FilterKey) {
   if (f === "paradis" || f === "fjord") {
@@ -74,6 +78,7 @@ export async function createEntry(input: {
   start_date: string;
   end_date: string;
   description?: string | null;
+  created_by?: string | null;
 }): Promise<CalendarEntry> {
   const token = getStoredToken();
   if (!token) throw new Error("Ikke innlogget");
@@ -86,6 +91,7 @@ export async function createEntry(input: {
       start_date: input.start_date,
       end_date: input.end_date,
       description: input.description ?? null,
+      created_by: input.created_by ?? null,
     },
   })) as CalendarEntry;
   return row;
