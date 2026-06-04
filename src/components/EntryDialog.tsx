@@ -146,7 +146,10 @@ export function EntryDialog({ open, onOpenChange, initialDate, entry, draft }: P
           entry: { title: payload.title, category, start_date: payload.start_date, end_date: payload.end_date },
         });
       } else {
-        await createEntry(payload);
+        await createEntry({
+          ...payload,
+          created_by: category === "note" ? (user?.name ?? null) : null,
+        });
         await logActivity({
           actor: user,
           action: "create",
