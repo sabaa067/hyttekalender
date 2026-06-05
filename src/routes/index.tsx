@@ -308,7 +308,7 @@ function Index() {
               active={view === "modern"}
               onClick={() => setViewMode("modern")}
               icon={<CalendarDays className="h-3.5 w-3.5" />}
-              label="Moderne"
+              label="Kalender"
             />
             <ToggleBtn
               active={view === "excel"}
