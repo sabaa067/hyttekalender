@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
+import { format, addDays, subDays } from "date-fns";
 import { nb } from "date-fns/locale";
-import { Trash2, Pencil, Plus } from "lucide-react";
-import { useState } from "react";
+import { Trash2, Pencil, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { useState, useRef } from "react";
 
 import {
   Dialog,
@@ -40,15 +40,19 @@ type Props = {
   date: Date | null;
   entries: CalendarEntry[];
   onOpenChange: (open: boolean) => void;
+  onDateChange: (date: Date) => void;
   onAdd: () => void;
   onEdit: (entry: CalendarEntry) => void;
 };
 
-export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: Props) {
+export function DayDetailPanel({ date, entries, onOpenChange, onDateChange, onAdd, onEdit }: Props) {
   const { user } = useAuth();
   const canEdit = user?.role === "admin";
   const qc = useQueryClient();
   const [pendingDelete, setPendingDelete] = useState<CalendarEntry | null>(null);
+
+  // Touch swipe tracking
+  const touchStartX = useRef<number | null>(null);
 
   const del = useMutation({
     mutationFn: async (e: CalendarEntry) => {
@@ -68,20 +72,63 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
   });
 
   if (!date) return null;
+
   const iso = toISODate(date);
   const day = entries.filter((e) => entryCoversDate(e, iso));
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
   const isPast = date.getTime() < todayStart.getTime();
 
+  const goPrev = () => onDateChange(subDays(date, 1));
+  const goNext = () => onDateChange(addDays(date, 1));
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (touchStartX.current === null) return;
+    const diff = touchStartX.current - e.changedTouches[0].clientX;
+    if (Math.abs(diff) > 50) {
+      diff > 0 ? goNext() : goPrev();
+    }
+    touchStartX.current = null;
+  };
+
   return (
     <>
       <Dialog open={!!date} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md rounded-3xl">
+        <DialogContent
+          className="max-w-md rounded-3xl"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
+        >
           <DialogHeader>
-            <DialogTitle className="text-2xl capitalize">
-              {format(date, "EEEE d. MMMM yyyy", { locale: nb })}
-            </DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl shrink-0 h-8 w-8 p-0"
+                onClick={goPrev}
+                aria-label="Forrige dag"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </Button>
+
+              <DialogTitle className="flex-1 text-center text-xl capitalize leading-tight">
+                {format(date, "EEEE d. MMMM yyyy", { locale: nb })}
+              </DialogTitle>
+
+              <Button
+                variant="ghost"
+                size="sm"
+                className="rounded-xl shrink-0 h-8 w-8 p-0"
+                onClick={goNext}
+                aria-label="Neste dag"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </Button>
+            </div>
           </DialogHeader>
 
           <div className="space-y-3 py-2">
@@ -98,10 +145,7 @@ export function DayDetailPanel({ date, entries, onOpenChange, onAdd, onEdit }: P
               const Icon = v.icon;
               const sameDay = e.start_date === e.end_date;
               return (
-                <div
-                  key={e.id}
-                  className={cn("rounded-2xl p-4", v.soft)}
-                >
+                <div key={e.id} className={cn("rounded-2xl p-4", v.soft)}>
                   <div className="flex items-start gap-3">
                     <Icon className="mt-1 h-5 w-5 shrink-0" />
                     <div className="flex-1 min-w-0">
