@@ -502,6 +502,7 @@ function Index() {
         date={detailDate}
         entries={entries}
         onOpenChange={(o) => !o && setDetailDate(null)}
+        onDateChange={(d) => setDetailDate(d)}
         onAdd={() => {
           setEditingEntry(null);
           setInitialDate(detailDate);
