@@ -170,6 +170,11 @@ function MiniMonth({
               >
                 {date.getDate()}
               </span>
+              {dayEntries.some((e) => e.category === "holiday") && (
+                <span className="absolute bottom-0 left-0 right-0 z-10 truncate px-0.5 text-[7px] font-medium leading-tight text-white text-center">
+                  {dayEntries.find((e) => e.category === "holiday")?.title}
+                </span>
+              )}
             </button>
           );
         })}
