@@ -149,6 +149,11 @@ function EntryChip({ entry }: { entry: CalendarEntry }) {
       title={entry.title}
     >
       {isBday && <Cake className="h-3 w-3 shrink-0" />}
+      {entry.category === "note" && entry.created_by && (
+        <span className="shrink-0 rounded-full bg-background/40 px-1 text-[9px] font-bold leading-tight">
+          {entry.created_by[0]}
+        </span>
+      )}
       <span className="truncate">{entry.title}</span>
     </div>
   );
