@@ -21,7 +21,6 @@ export type FilterKey =
   | "paradis"
   | "fjord"
   | "event"
-  | "highlight"
   | "note"
   | "holiday";
 
@@ -29,7 +28,6 @@ export const FILTERS: { key: FilterKey; label: string }[] = [
   { key: "paradis", label: "Paradis" },
   { key: "fjord", label: "Fjordgløtt" },
   { key: "event", label: "Arrangementer" },
-  { key: "highlight", label: "Høydepunkter" },
   { key: "note", label: "Notater" },
 ];
 
@@ -46,7 +44,7 @@ function entryMatchesSingleFilter(e: CalendarEntry, f: FilterKey) {
     if (loc === null) return true;
     return loc === f;
   }
-  if (f === "highlight") return e.category === "highlight" || e.category === "birthday";
+  if (f === "event") return e.category === "event" || e.category === "highlight" || e.category === "birthday";
   if (f === "holiday") return e.category === "holiday";
   return e.category === f;
 }

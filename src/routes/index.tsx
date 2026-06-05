@@ -43,7 +43,6 @@ const FILTER_META: Record<
   paradis: { color: CABIN_LOCATION_META.paradis.color, soft: CABIN_LOCATION_META.paradis.soft },
   fjord: { color: CABIN_LOCATION_META.fjord.color, soft: CABIN_LOCATION_META.fjord.soft },
   event: { color: CATEGORY_META.event.color, soft: CATEGORY_META.event.soft },
-  highlight: { color: CATEGORY_META.highlight.color, soft: CATEGORY_META.highlight.soft },
   note: { color: CATEGORY_META.note.color, soft: CATEGORY_META.note.soft },
 };
 import { generateHolidaysForYears } from "@/lib/holidays";
@@ -71,7 +70,7 @@ function Index() {
     }
     setView(next);
   };
-  const ALL_MAIN_FILTERS: FilterKey[] = ["paradis", "fjord", "event", "highlight", "note"];
+  const ALL_MAIN_FILTERS: FilterKey[] = ["paradis", "fjord", "event", "note"];
   const VALID_FILTER_KEYS = new Set<FilterKey>([
     "paradis",
     "fjord",
