@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Plus, LayoutGrid, CalendarDays, Table2, Sparkles } from "lucide-react";
 
@@ -14,6 +14,7 @@ import { CalendarNav } from "@/components/CalendarNav";
 import { AppMenu } from "@/components/AppMenu";
 import { NotificationBell } from "@/components/NotificationBell";
 import { LoginGate } from "@/components/LoginGate";
+import { WelcomeBanner } from "@/components/WelcomeBanner";
 import { HistoryPanel } from "@/components/HistoryPanel";
 import { ProfileChip } from "@/components/ProfileChip";
 import { BiometricGate } from "@/components/BiometricGate";
@@ -59,6 +60,12 @@ type ViewMode = "modern" | "overview" | "excel";
 function Index() {
   const { user, loading: authLoading } = useAuth();
   const canEdit = user?.role === "admin";
+  const [showWelcome, setShowWelcome] = useState(false);
+  const prevUser = useRef<typeof user>(null);
+  useEffect(() => {
+    if (user && !prevUser.current) setShowWelcome(true);
+    prevUser.current = user;
+  }, [user]);
   const [view, setView] = usePersistedState<ViewMode>("hk_view", "modern");
   const setViewMode = (next: ViewMode) => {
     const n = new Date();
@@ -252,6 +259,9 @@ function Index() {
 
   return (
     <BiometricGate>
+    {showWelcome && user && (
+      <WelcomeBanner name={user.name} onDone={() => setShowWelcome(false)} />
+    )}
     <div
       className={cn(
         "min-h-screen transition-colors",
