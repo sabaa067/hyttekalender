@@ -499,7 +499,7 @@ function Index() {
       />
       <DayDetailPanel
         date={detailDate}
-        entries={entries}
+        entries={allEntries}
         onOpenChange={(o) => !o && setDetailDate(null)}
         onDateChange={(d) => setDetailDate(d)}
         onAdd={() => {
