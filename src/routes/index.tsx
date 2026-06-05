@@ -176,6 +176,12 @@ function Index() {
     return generateHolidaysForYears([baseYear - 1, baseYear, baseYear + 1, baseYear + 2]);
   }, [showHolidays, view, monthDate, year]);
 
+  // Excel-visningen viser alltid høytider uavhengig av showHolidays
+  const excelHolidayEntries = useMemo(() => {
+    const now = new Date().getFullYear();
+    return generateHolidaysForYears([now, now + 1, now + 2]);
+  }, []);
+
   const allEntries = useMemo(
     () => (holidayEntries.length ? [...entries, ...holidayEntries] : entries),
     [entries, holidayEntries],
@@ -434,7 +440,7 @@ function Index() {
         {view === "excel" && (
           <ExcelView
             year={year}
-            entries={filteredEntries}
+            entries={[...filteredEntries, ...excelHolidayEntries]}
             filters={effectiveFilters}
             cabinLocations={cabinLocations}
             onDayClick={(d) => {

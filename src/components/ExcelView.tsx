@@ -49,13 +49,6 @@ const COL_DEFS: { key: ColKey; label: string; color: string; soft: string; filte
     soft: CATEGORY_META.event.soft,
     filterKey: "event",
   },
-  {
-    key: "highlight",
-    label: "Høydepunkter",
-    color: CATEGORY_META.highlight.color,
-    soft: CATEGORY_META.highlight.soft,
-    filterKey: "highlight",
-  },
   ...NOTE_AUTHORS.map((a) => ({
     key: `note:${a}` as ColKey,
     label: `${a} notater`,
@@ -118,7 +111,8 @@ export function ExcelView({ year: _year, entries, filters, onDayClick, onEntryCl
     return out;
   }, []);
 
-  const cols = useMemo(() => COL_DEFS.filter((c) => filters.has(c.filterKey)), [filters]);
+  // Excel-visningen viser alltid alle kolonner uavhengig av aktive filtre
+  const cols = useMemo(() => COL_DEFS, []);
 
   // Map iso -> per-column entries
   const cellMap = useMemo(() => {
