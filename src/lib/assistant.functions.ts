@@ -190,7 +190,7 @@ function extractTimeRange(query: string, visibleYear?: number): { start: string;
 function buildDirectReply(entries: IndexedEntry[], currentYear: number, prefix?: string): string {
   const lines = entries.slice(0, 12).map((e) => `${e.title}: ${formatDateRange(e.start_date, e.end_date, currentYear)}`);
   if (entries.length > 12) lines.push(`I tillegg finnes ${entries.length - 12} flere treff.`);
-  return [prefix, ...lines].filter(Boolean).join("\n");
+  return ["Her er:", ...(prefix ? [prefix] : []), ...lines].join("\n");
 }
 
 export const askAssistant = createServerFn({ method: "POST" })
@@ -470,11 +470,14 @@ export const askAssistant = createServerFn({ method: "POST" })
       "Eksempel: bruker skriver 'morten'. Søk i KJENTE NAVN, finn 'Morten', match alle entries der search inneholder 'morten' (inkl. eieformer som 'Mortens').",
       "",
       "SVARSTIL – VIKTIG:",
-      "- Vær KORT, ROLIG og MENNESKELIG. Maks 1–4 linjer for vanlige svar.",
+      "- START ALLTID svaret med 'Her er:' etterfulgt av en linje. Ingen innledning, ingen forklaring før listen.",
+      "- Gå rett til poenget. Ingen intro-setninger som 'Jeg fant...' eller 'Basert på kalenderen...'.",
       "- Ingen pyntetegn: ikke bruk •, ●, →, =>, ---, ***, ###, ** eller emojis.",
       "- Ikke bruk markdown-overskrifter eller fete typer. Vanlig tekst.",
-      "- For lister med flere oppføringer: én oppføring per linje, formatet 'Tittel: dato' eller 'dato – Tittel'. Ingen punktmerker foran.",
+      "- For lister: én oppføring per linje, formatet 'Tittel: dato'. Ingen punktmerker foran.",
       "- Datoer på norsk: '12–15 juli', '17. mai', '2 august'. Ingen ekstra årstall hvis det er i år.",
+      "- AVSLUTT alltid svaret med én blank linje og deretter ETT oppfølgingsspørsmål som starter med 'Vil du vite:'.",
+      "- Eksempel på avslutning: 'Vil du vite hvem som er på Fjordgløtt samme periode?'",
       "- Aldri svar 'jeg forstår ikke' – gjør et søk, gjett beste tolkning, eller foreslå omformuleringer.",
       "",
       "SAMTALE: Bruk historikken for å løse korte oppfølgere ('de', 'da', 'samme helg', 'hva med august'). Brukeren skal slippe å gjenta navn/datoer.",
@@ -503,14 +506,19 @@ export const askAssistant = createServerFn({ method: "POST" })
       "EKSEMPLER PÅ SVARFORMAT:",
       "Spm: 'Når skal Morten på hytta?'",
       "Svar:",
+      "Her er:",
       "Mortens familie på Paradis: 12–15 juli",
       "Mortens familie på Fjordgløtt: 2–4 august",
       "",
+      "Vil du vite hvem andre som er på hytta i juli?",
+      "",
       "Spm: 'Hva skjer 17 mai?'",
       "Svar:",
-      "17. mai:",
-      "Nasjonaldag",
-      "Familiegrilling hos Morten",
+      "Her er:",
+      "Grunnlovsdag (17. mai): 17. mai",
+      "Familiegrilling hos Morten: 17. mai",
+      "",
+      "Vil du vite hva som skjer dagen etter?",
       "",
       "Svar ALLTID på norsk. ALDRI på engelsk.",
       "",
