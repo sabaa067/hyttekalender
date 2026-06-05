@@ -55,7 +55,7 @@ export const CATEGORY_META: Record<
 // Note: "cabin" is no longer offered directly — users pick Paradis or Fjordgløtt
 // in the entry dialog, which are saved as category="cabin" with the location
 // embedded in the title.
-export const CATEGORIES: Category[] = ["cabin", "event", "highlight", "note"];
+export const CATEGORIES: Category[] = ["cabin", "event", "note"];
 
 // Detect a birthday from title even when category is "highlight".
 export function isBirthdayEntry(e: { title: string; category: Category }): boolean {
