@@ -31,9 +31,9 @@ export function WelcomeBanner({ name, onDone }: Props) {
       className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center"
       style={{ opacity: fading ? 0 : 1, transition: "opacity 0.5s ease" }}
     >
-      <p className="rounded-2xl bg-background/70 px-6 py-3 text-xl font-semibold backdrop-blur-sm">
+      <p className="text-sm font-medium text-foreground/70">
         {displayed}
-        <span className="animate-pulse">|</span>
+        <span className="animate-pulse opacity-60">|</span>
       </p>
     </div>
   );
